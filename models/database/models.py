@@ -43,32 +43,6 @@ class Lessons(Base):
     label = Column(String)
 
 
-class Users(Base):
-    __tablename__ = "users"
-
-    studentId = Column(Integer, primary_key=True, index=True)
-    groupId = Column(Integer, ForeignKey('groups.id'))
-    course = Column(String)
-    department = Column(String)
-    faculty = Column(String)
-    name = Column(String)
-    surname = Column(String)
-    middleName = Column(String)
-    birthday = Column(Date)
-    email = Column(String)
-    gradebook = Column(String)
-    login = Column(String)
-    password = Column(String)
-    accessToken = Column(String)
-    tokenExpireAt = Column(String)
-    refreshToken = Column(String)
-    firebaseToken = Column(String)
-    telegramId = Column(BigInteger)
-    role = Column(String, default="Student")  # Headman | Helper
-    permissions = Column(ARRAY(String), default=['AddHomework'])
-    avatarUrl = Column(String)
-
-
 class Accounts(Base):
     __tablename__ = "accounts"
 
@@ -92,16 +66,6 @@ class Accounts(Base):
     additionalData = Column(JSON, default={})
 
 
-class News(Base):
-    __tablename__ = "news"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    description = Column(String)
-    imageUrl = Column(String)
-    referenceUrl = Column(String)
-
-
 class Statistics(Base):
     __tablename__ = "statistics"
 
@@ -110,7 +74,3 @@ class Statistics(Base):
     apiVersion = Column(Integer)
     groupName = Column(String)
     data = Column(JSON, nullable=True)
-
-
-class Variants(Base):
-    __tablename__ = "statistics"

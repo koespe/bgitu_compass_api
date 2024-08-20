@@ -32,6 +32,9 @@ def generate_token(token_type: str):
                       })
 async def register_guest(payload: payloads.RegisterGuest,
                          session: AsyncSession = Depends(get_session_fastapi)):
+    """
+    Добавление неподтвержденного пользователя (без аутентификации через EOS)
+    """
     access_token = generate_token(token_type='access')
     refresh_token = generate_token(token_type='refresh')
 

@@ -182,44 +182,6 @@ async def is_schedule_filled(group_id, monday_date):
         return r is not None
 
 
-# TODO: ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ СУЩЕСТВУЕТ, то просто обновлять нужные поля
-async def insert_user(student_id, group_id, course, department, faculty,
-                      login, password, access_token, token_expire_at, refresh_token,
-                      name, surname, middle_name,
-                      birthday, gradebook, email, avatarUrl):
-    async with get_session() as session:
-        new_user = Users(studentId=student_id,
-                         groupId=group_id,
-                         course=course,
-                         department=department,
-                         faculty=faculty,
-                         birthday=birthday,
-                         gradebook=gradebook,
-                         email=email,
-                         login=login,
-                         password=password,
-                         accessToken=access_token,
-                         tokenExpireAt=token_expire_at,
-                         refreshToken=refresh_token,
-                         name=name,
-                         surname=surname,
-                         middleName=middle_name,
-                         avatarUrl=avatarUrl
-                         )
-        session.add(new_user)
-        try:
-            await session.commit()
-            return 'new_user'
-        except IntegrityError:
-            await session.rollback()
-            old_user_data_query = select(Users).where(Users.studentId == student_id)
-            old_user_data = await session.scalar(old_user_data_query)
-            await session.delete(old_user_data)
-            session.add(new_user)
-            await session.commit()
-            return 'old_user'
-
-
 async def manage_subjects(subject_name: str, group_id: int):
     sql_search_in_group = """
     WITH modified_subjects AS (
