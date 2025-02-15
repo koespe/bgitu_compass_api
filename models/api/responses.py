@@ -53,12 +53,13 @@ class TeacherSearchQuery(BaseModel):
 
 
 class TeacherLocationPerLesson(BaseModel):
+    subjectName: str
     classroom: str
     building: str
     isLecture: bool
     lessonDate: date
-    startAt: time
-    endAt: time
+    startAt: time = Field(..., example="12:20:00")
+    endAt: time = Field(..., example="14:20:00")
     weekday: int
 
 

@@ -4,21 +4,17 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import Depends
 from fastapi.security import HTTPBearer
 
-from fastapi.templating import Jinja2Templates
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 
-from config import PUBLIC_DIRECTORY
 from models.api import responses
 from models.database.models import Groups, Subjects
-from database.base import get_session_fastapi, search_group, get_session_fastapi_bot
+from database.base import get_session_fastapi, search_group
 
 general_router = APIRouter()
 security = HTTPBearer()
-templates = Jinja2Templates(directory=PUBLIC_DIRECTORY)
-
 
 @general_router.get('/groups', tags=['Schedules'],
                     responses={
@@ -65,28 +61,8 @@ async def get_subjects(groupId: int, session: AsyncSession = Depends(get_session
 
 # Joke
 @general_router.get("/", response_class=HTMLResponse)
-async def main_page():
+async def rickroll():
     """
     RickRoll если кто-то захочет исследовать api
     """
     return RedirectResponse('https://youtu.be/-cctf5hP900?si=Qm9q8RzFWVyGCKrH&t=466')
-
-
-@general_router.get('/getGroupIDByTGID',
-                    responses={
-                        200: {"model": responses.GetDataByTGID},
-                        404: {"description": "User not found"}
-                    })
-async def get_group_id_by_telegram_id(telegramID: int,
-                                      session: AsyncSession = Depends(get_session_fastapi_bot)):
-    query = text("SELECT users.group_id, users.group_name FROM users WHERE users.id = :val")
-    result = await session.execute(query, {'val': telegramID})
-    row = result.fetchone()
-
-    if row:
-        return JSONResponse({
-            'group_id': row.group_id,
-            'group_name': row.group_name
-        }, status_code=200)
-    else:
-        raise HTTPException(status_code=404, detail="User not found")

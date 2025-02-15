@@ -7,3 +7,4 @@
 /data/saved_schedules/
 /.env
 /hidden/
+/modules/site_updates.py

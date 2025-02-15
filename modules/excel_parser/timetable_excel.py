@@ -2,14 +2,15 @@ import datetime
 import re
 
 import openpyxl
+from icecream import ic
 from openpyxl.cell import MergedCell
 from openpyxl.worksheet.worksheet import Worksheet
 
 from config import EXCEL_DIRECTORY
 from data import WEEKDAY_INDEX
-from database.base import manage_subjects, manage_groups, db_init, insert_schedule, db_reset_schedules, db_drop_tables
-from modules.excel_parser.excel_parser_functions import make_dict_day, extract_numbers, standardize_names
-from modules.schedule_managment.weekly_updates import weekly_management_schedule
+from database.base import correct_subject_spelling, manage_groups, db_init, insert_schedule, db_reset_schedules, db_drop_tables
+from modules.excel_parser.excel_parser_functions import make_dict_day, extract_classrooms, standardize_names, \
+    split_number_and_surname
 
 
 async def initialize_excel_schedules(full_reset=False,
@@ -42,9 +43,6 @@ async def initialize_excel_schedules(full_reset=False,
         else:  # БАК и СПО
             await process_sheet(sheet)
 
-    if full_reset or reset_schedules or reset_schedules_and_subjects:
-        await weekly_management_schedule()
-
 
 async def process_sheet(sheet):
     """Обрабатывает лист Excel и извлекает расписание для каждой группы."""
@@ -76,7 +74,7 @@ def parse_group_name(sheet, group_column):
 
     if 'спо' in group_name.lower():
         group_name = group_name.replace('спо', 'СПО')
-
+    ic(group_name)
     return group_name
 
 
@@ -142,9 +140,9 @@ async def process_magistracy(sheet):
             if weekday_now == '' or weekday_now is None:
                 break
             if weekday_now != weekday_last:  # Смена дней
-                schedule_week['second_week'][
-                    WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
                 schedule_week['first_week'][
+                    WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
+                schedule_week['second_week'][
                     WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
 
                 weekday_last = weekday_now
@@ -159,18 +157,18 @@ async def process_magistracy(sheet):
                 lesson_second_week = parse_day(sheet, row=group_row, col=5)
 
             if lesson_first_week is not None:
-                subject_id = await manage_subjects(lesson_first_week.get('subjectName'), groups_id[additional_index])
-                day_template = make_dict_day(data=lesson_first_week, subject_id=subject_id)
+                await correct_subject_spelling(lesson_first_week.get('subjectName'), groups_id[additional_index])
+                day_template = make_dict_day(data=lesson_first_week)
                 schedule_per_day_first_week.append(day_template)
 
             if lesson_second_week is not None:
-                subject_id = await manage_subjects(lesson_second_week.get('subjectName'), groups_id[additional_index])
-                day_template = make_dict_day(data=lesson_second_week, subject_id=subject_id)
+                await correct_subject_spelling(lesson_second_week.get('subjectName'), groups_id[additional_index])
+                day_template = make_dict_day(data=lesson_second_week)
                 schedule_per_day_second_week.append(day_template)
         # Закончили парсить группу и заносим последние данные
-        schedule_week['second_week'][
-            WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
         schedule_week['first_week'][
+            WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
+        schedule_week['second_week'][
             WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
         await insert_schedule(groups_id[additional_index], schedule_week)
 
@@ -189,8 +187,8 @@ async def parse_group_schedule(sheet, group_id, group_column):
         weekday_now = parse_cell(sheet, row=group_row, col=1)
 
         if weekday_now != weekday_last:
-            schedule_week['second_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
-            schedule_week['first_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
+            schedule_week['first_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
+            schedule_week['second_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
 
             if weekday_now:
                 weekday_last = weekday_now
@@ -201,17 +199,20 @@ async def parse_group_schedule(sheet, group_id, group_column):
         lesson_second_week = parse_day(sheet, row=group_row + 1, col=group_column)
 
         if lesson_first_week:
-            subject_id = await manage_subjects(lesson_first_week.get('subjectName'), group_id)
-            day_template = make_dict_day(data=lesson_first_week, subject_id=subject_id)
+            await correct_subject_spelling(lesson_first_week.get('subjectName'), group_id)
+            day_template = make_dict_day(data=lesson_first_week)
             schedule_per_day_first_week.append(day_template)
 
         if lesson_second_week:
-            subject_id = await manage_subjects(lesson_second_week.get('subjectName'), group_id)
-            day_template = make_dict_day(data=lesson_second_week, subject_id=subject_id)
+            await correct_subject_spelling(lesson_second_week.get('subjectName'), group_id)
+            day_template = make_dict_day(data=lesson_second_week)
             schedule_per_day_second_week.append(day_template)
 
-    schedule_week['second_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
-    schedule_week['first_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
+    schedule_week['first_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
+    schedule_week['second_week'][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
+
+    # ТИПО ФИКС
+    schedule_week = {"first_week": schedule_week["second_week"], "second_week": schedule_week["first_week"]}
     return schedule_week
 
 
@@ -285,9 +286,10 @@ def parse_day(sheet: Worksheet, row, col):
 
     # Обработка фраз "консп." и временное удаления для корректной работы алгоритмы
     strange_phrase = ''
-    if '(' in value and ')' in value:
-        strange_phrase = value[value.find('('):value.find(')') + 1]
-        value = value.replace(strange_phrase, '')
+    if 'конс' in value:
+        if '(' in value and ')' in value:
+            strange_phrase = value[value.find('('):value.find(')') + 1]
+            value = value.replace(strange_phrase, '')
 
     # В строчках бывает очень много пробелов
     for i in range(2, 30):
@@ -299,10 +301,13 @@ def parse_day(sheet: Worksheet, row, col):
     str_list_classrooms = str_list.copy()  # Сохранение оригинала для логики преподавателей
     if len(str_list) == 0:  # В некоторых ячейках есть непонятный невидимый символ переноса
         return None
-
-    classrooms_algorithm = extract_numbers(str_list)
+    ic('до обработки:, ', str_list)
+    str_list = split_number_and_surname(str_list)
+    ic(str_list)
+    classrooms_algorithm = extract_classrooms(str_list)
     classrooms = classrooms_algorithm['classrooms']
     str_list = classrooms_algorithm['str_list_no_classrooms']
+    # print('classrooms: ',classrooms)
 
     if bool(classrooms):  # Самая обычная ячейка
         if len(classrooms) == 1:
@@ -324,28 +329,37 @@ def parse_day(sheet: Worksheet, row, col):
                 teacher = str_list[-1]
                 del str_list[-1:]
             else:
-                teacher = str_list[-2] + ' ' + str_list[-1]
-                del str_list[-2:]
+                # print(str_list)
+                if len(str_list) >= 3:  # бывает "информатика 218" — не понятно куда пропал препод
+
+                    # Обработка вида Луцевич А А
+                    if len(str_list[-1]) == 1 and len(str_list[-2]) == 1:
+                        str_list.append(str_list[-2] + '.' + str_list[-1] + '.')
+                        del str_list[-3]
+                        del str_list[-2]
+
+                    teacher = str_list[-2] + ' ' + str_list[-1]
+                    del str_list[-2:]
+                else:
+                    teacher = ''
 
         else:  # Иногда бывает два кабинета в одной ячейке. !!! В этом случае первое значение — группа А, второе — Б
+            right_cell_value = classrooms[1] if len(classrooms) > 1 else classrooms[0]
+            ic('ТРИГГЕР 2 ПРЕПОДА')
             right_cell_value = parse_cell(sheet, row, col + 1)
             if cell.value == right_cell_value:
                 classroom = classrooms[0]
-
-                str_list.remove(classrooms[0])
-                str_list.remove(classrooms[1])
-
                 teacher = str_list[-4] + ' ' + str_list[-3]
+
             else:
                 classroom = classrooms[1]
-
-                str_list.remove(classrooms[0])
-                str_list.remove(classrooms[1])
-
                 teacher = str_list[-2] + ' ' + str_list[-1]
-            del str_list[-4:]
-        teacher = standardize_names(teacher)  # Правим написание преподавателя
+            del str_list[-4:]  # Удаляем оба преподавателя
 
+        ic('в standartize идет: ', teacher)
+        # ic('После очистки массива от препода: ',str_list)
+        teacher = standardize_names(teacher)  # Правим написание преподавателя
+        ic(teacher)
         subject_name = ' '.join(str_list)
         if classroom.upper() == 'ДОТ':
             building = 'ДОТ'
@@ -360,6 +374,7 @@ def parse_day(sheet: Worksheet, row, col):
     if len(strange_phrase) > 0:
         subject_name += ' ' + strange_phrase
     subject_name = ' '.join(str_list)
+    subject_name = subject_name[0].upper() + subject_name[1:]
 
     return {
         "subjectName": subject_name,
