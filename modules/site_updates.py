@@ -15,7 +15,7 @@ from config import settings
 
 ; supervisor config file
 [program:bgitu-updates]
-command=/home/user/bgitu_api/venv/bin/python3 /home/user/bgitu_api/modules/site_updates.py
+command=/home/user/bgitu_api/venv/bin/python3 modules/site_updates.py
 directory=/home/user/bgitu_api
 autostart=true
 autorestart=true
@@ -233,7 +233,7 @@ async def main():
     """
     scheduler = AsyncIOScheduler()
     await check_for_updates()
-    scheduler.add_job(check_for_updates, "interval", minutes=15)
+    scheduler.add_job(check_for_updates, "interval", minutes=5)
     scheduler.start()
 
     print("Планировщик запущен. Ожидание событий...")
