@@ -12,27 +12,25 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse
 
-from config import SCHEDULE_UPLOAD_DATE
+from config import paths_config
 from database.base import get_session_fastapi
-from locals import loc
 from models.api import responses
-from models.database.models import Lessons, Subjects, Groups
+from models.database.models import Groups
+
 
 schedules_router = APIRouter(tags=["Schedules"])
 
 
-@schedules_router.get("/v2/lessons", responses={200: {"model": responses.Lessons}})
+@schedules_router.get("/v2/lessons")
 async def get_lessons(
     groupId: int,
     session: AsyncSession = Depends(get_session_fastapi),
-    cache: Optional[bool] = Query(False, description="Enable caching max-age=600"),
+    cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
 ):
     """
     Расписание на 2 недели в json
     """
-    query = await session.execute(
-        select(Groups.rawSchedule).where(Groups.id == groupId)
-    )
+    query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
     json_schedule = query.scalar()  # dict
 
     if json_schedule is None:
@@ -44,9 +42,7 @@ async def get_lessons(
         new_schedule = {}
         for day, classes in json_schedule[week].items():
             day_number = int(day)
-            day_name = calendar.day_name[
-                day_number - 1
-            ].upper()  # day_number - 1 для соответствия с индексами
+            day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
             new_schedule[day_name] = classes
         json_schedule[week] = new_schedule
 
@@ -54,7 +50,6 @@ async def get_lessons(
     if cache:
         response.headers["Cache-Control"] = "max-age=600, public"
     return response
-
 
 
 @schedules_router.get(
@@ -67,24 +62,21 @@ async def get_lessons(
     },
 )
 async def find_teacher(
-    search_query: Optional[str] = Query(
-        None, alias="searchQuery", description="Поисковой запрос, регистр не важен"
-    ),
+    search_query: Optional[str] = Query(None, alias="searchQuery", description="Поисковой запрос, регистр не важен"),
     teacher: Optional[str] = Query(None, description="Точное совпадение"),
     date_from: Optional[date] = Query(None, alias="dateFrom"),
     date_to: Optional[date] = Query(None, alias="dateTo"),
     session: AsyncSession = Depends(get_session_fastapi),
 ):
     """
-    Расписание преподавателя (на 3 недели если не указывать dateFrom и dateTo)
+    Расписание преподавателя
+    dateFrom и dateTo — optional, без них возвращается расписание на 3 недели
     """
     if teacher:
         if not is_valid_russian(teacher):
             raise HTTPException(detail="No results", status_code=404)
 
-        all_json_schedule = await session.execute(
-            select(Groups.name, Groups.rawSchedule)
-        )
+        all_json_schedule = await session.execute(select(Groups.name, Groups.rawSchedule))
 
         query_template = """
             {
@@ -108,21 +100,18 @@ async def find_teacher(
         """
         search_query = query_template.replace("{teacher}", teacher).strip()
         search_expression = jmespath.compile(search_query)
-
         parse_results = {"first_week": {}, "second_week": {}}
 
-        # TODO: Сделать group_name
         for group_data in all_json_schedule:
             json_schedule = group_data.rawSchedule
-            # group_name = group_data.name
+            group_name = group_data.name
             search_results = search_expression.search(json_schedule)
             search_results = replace_none_with_empty(search_results)
             if search_results:
                 for week in parse_results:
                     for day, subjects in search_results[week].items():
                         for subject in subjects:
-                            # subject["groupName"] = group_name
-                            del subject["subjectId"]  # Незачем
+                            subject["groupName"] = group_name
                         if day not in parse_results[week]:
                             parse_results[week][day] = []
                         parse_results[week][day].extend(subjects)
@@ -130,61 +119,47 @@ async def find_teacher(
         # Удаление дубликатов и сортировка по времени
         for week in parse_results:
             for day in parse_results[week]:
-                # Удаляем дубликаты
-                unique_items = [
-                    dict(t)
-                    for t in {tuple(d.items()) for d in parse_results[week][day]}
-                ]
+                # Удаляем дубликаты из-за одной группы у потока
+                unique_items = [dict(t) for t in {tuple(d.items()) for d in parse_results[week][day]}]
 
                 # Сортируем по startTime
                 sorted_items = sorted(
                     unique_items,
-                    key=lambda x: datetime.datetime.strptime(
-                        x.get("startAt"), "%H:%M:%S"
-                    ),
+                    key=lambda x: datetime.datetime.strptime(x.get("startAt"), "%H:%M:%S"),
                 )
                 parse_results[week][day] = sorted_items
 
         start_date = date_from or date.today()
         end_date = date_to or (start_date + datetime.timedelta(days=21))
-
-        response_data = []
         current_date = start_date
+        response_data = []
         while current_date <= end_date:
-            weekday = current_date.weekday() + 1
+            weekday = current_date.weekday() + 1  # +1 потому что от 0 до 6
             if weekday == 7:  # Пропускаем воскресенье
                 current_date += datetime.timedelta(days=1)
                 continue
 
             week_number = int(current_date.strftime("%V"))  # Номер недели
             week_type = "first_week" if week_number % 2 == 1 else "second_week"
-
             lessons_find = parse_results.get(week_type, {}).get(str(weekday), [])
             if lessons_find:
                 for lesson in lessons_find:
-                    lesson["lessonDate"] = current_date.strftime("%Y-%m-%d")
-                    lesson["weekday"] = (
-                        current_date.weekday() + 1
-                    )  #  1 - понедельник, 6 - суббота
-                response_data.extend(lessons_find)
+                    lesson_data = lesson.copy()
+                    lesson_data["lessonDate"] = current_date.strftime("%Y-%m-%d")
+                    lesson_data["weekday"] = current_date.weekday() + 1  # 1 - понедельник, 6 - суббота
+                    response_data.append(lesson_data)
             current_date += datetime.timedelta(days=1)
 
         response_data = {tuple(item.items()): item for item in response_data}.values()
-        response_data = sorted(
-            response_data, key=lambda x: (x["lessonDate"], x["startAt"])
-        )
-        return response_data
+        response_data = sorted(response_data, key=lambda x: (x["lessonDate"], x["startAt"]))
+        return merge_cross_group_classes(response_data)
 
     elif search_query:
-        return ["Функция временно недоступна"]  # В ожидании валидатора
-
         if not is_valid_russian(search_query):
             raise HTTPException(detail="No results", status_code=404)
 
         search_query = search_query.strip().title()
-        search_expression = jmespath.compile(
-            f"*.*[?contains(teacher, '{search_query}')].teacher"
-        )
+        search_expression = jmespath.compile(f"*.*[?contains(teacher, '{search_query}')].teacher")
         all_json_schedule = await session.execute(select(Groups.rawSchedule))
         teachers_list = set()
 
@@ -204,7 +179,7 @@ async def find_teacher(
 
         return list(teachers_list)
     else:
-        raise HTTPException(detail=loc("errors", "no_action"), status_code=400)
+        raise HTTPException(detail="No action or key provided", status_code=400)
 
 
 @schedules_router.get(
@@ -216,9 +191,7 @@ async def find_teacher(
         }
     },
 )
-async def get_schedule_version(
-    request: Request, groupId: int, session: AsyncSession = Depends(get_session_fastapi)
-):
+async def get_schedule_version(request: Request, groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
     """
     В headers есть "DataVersion"
     В новой версии приложения ответ в json теперь, а в старой — int
@@ -226,16 +199,12 @@ async def get_schedule_version(
     version = request.headers.get("DataVersion")
     if version is not None:
         query = await session.execute(
-            select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(
-                Groups.id == groupId
-            )
+            select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
         )
         schedule_version = [dict(r._mapping) for r in query]
         return schedule_version[0]
     else:
-        query = await session.execute(
-            select(Groups.scheduleVersion).where(Groups.id == groupId)
-        )
+        query = await session.execute(select(Groups.scheduleVersion).where(Groups.id == groupId))
         schedule_version = query.scalar()
         return int(schedule_version)
 
@@ -243,15 +212,18 @@ async def get_schedule_version(
 @schedules_router.get("/scheduleUpdateDate")
 async def get_schedule_update_date():
     """
-    Для бота
+    В приложении есть userDataVersion - она бесполезна, но надо пока оставить (до 1 сентября 2025 года)
     """
-    with open(SCHEDULE_UPLOAD_DATE, "r") as f:
+    with open(paths_config.schedule_upload_date, "r") as f:
         data = json.load(f)
     return data
 
 
 def is_valid_russian(text: str) -> bool:
-    return bool(re.match(r"^[\w\s\.]+$", text))
+    """
+    Защита от инъекций
+    """
+    return bool(re.match(r"^[\w\s.]+$", text))
 
 
 def replace_none_with_empty(obj):
@@ -261,3 +233,38 @@ def replace_none_with_empty(obj):
     if isinstance(obj, dict):
         return {k: replace_none_with_empty(v) for k, v in obj.items()}
     return [] if obj is None else obj
+
+
+def merge_cross_group_classes(lessons):
+    """
+    Если занятие для потока, то убираем дубликаты и записываем несколько групп в groupName
+    """
+    unique_lessons = {}
+
+    for lesson in lessons:
+        # Создаем ключ из всех полей, кроме groupName
+        key = (
+            lesson["subjectName"],
+            lesson["building"],
+            lesson["startAt"],
+            lesson["endAt"],
+            lesson["classroom"],
+            lesson["teacher"],
+            lesson["isLecture"],
+            lesson["lessonDate"],
+            lesson["weekday"],
+        )
+
+        # Если ключ уже существует, добавляем groupName к списку групп
+        if key in unique_lessons:
+            current_groups = unique_lessons[key]["groupName"]
+            # Проверяем, является ли текущее значение уже строкой с запятыми
+            if "," in current_groups:
+                unique_lessons[key]["groupName"] += f", {lesson['groupName']}"
+            else:
+                # Первое объединение - преобразуем в строку с запятой
+                unique_lessons[key]["groupName"] = f"{current_groups}, {lesson['groupName']}"
+        else:
+            # Если ключ встречается впервые, просто добавляем занятие в словарь
+            unique_lessons[key] = lesson.copy()
+    return list(unique_lessons.values())

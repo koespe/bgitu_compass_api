@@ -2,9 +2,5 @@
 /venv/
 /tests/
 /_backups
-/modules/firebase/firebase-auth-token.json
-/data/saved_schedules/*.xlsx
-/data/saved_schedules/
 /.env
-/hidden/
-/modules/site_updates.py
+/updates/schedule_hashes.json

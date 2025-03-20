@@ -1,32 +1,39 @@
-import datetime
 import pathlib
 
-from os import getenv
-from types import SimpleNamespace
-
-from dotenv import load_dotenv, find_dotenv
+from pydantic_settings import BaseSettings
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
-load_dotenv(find_dotenv())
 
-postgres_conn_str = getenv('POSTGRES_CONNECTION_STRING')
-ADMIN_PASSWORD = getenv('ADMIN_PASSWORD')
+class PathsConfig(BaseSettings):
+    work_directory: pathlib.Path = pathlib.Path(".")
+    apk_file: pathlib.Path = work_directory / "data" / "updates" / "bgitu_compass.apk"
+    updates_remote_config: pathlib.Path = work_directory / "data" / "updates" / "update_remote_config.json"
+    changelogs: pathlib.Path = work_directory / "data" / "changelogs"
+    schedule_hashes: pathlib.Path = work_directory / "data" / "schedule_hashes.json"
 
-engine = create_async_engine(postgres_conn_str)
+    schedule_upload_date: pathlib.Path = work_directory / "data" / "updates" / "scheduleUploadDate.json"
 
-HOSTNAME_PORT = 'http://localhost:8000'
 
-# directories = SimpleNamespace() directories.apk
-WORK_DIRECTORY = pathlib.Path('.')  # Последующее взаимодействие с файлами
-EXCEL_DIRECTORY = pathlib.Path(WORK_DIRECTORY, 'data', 'saved_schedules')
-APK_FILE = pathlib.Path(WORK_DIRECTORY, 'data', 'updates') / 'bgitu_compass.apk'
-UPDATES_REMOTE_CONFIG = pathlib.Path(WORK_DIRECTORY, 'data', 'updates') / 'update_remote_config.json'
-CHANGELOGS_DIR = pathlib.Path(WORK_DIRECTORY, 'data', 'changelogs')
-SCHEDULE_UPLOAD_DATE = pathlib.Path(WORK_DIRECTORY, 'data', 'updates', 'scheduleUploadDate.json')
+class Settings(BaseSettings):
+    swap_weeks: bool  # ЕСЛИ СЛОМАЛАСЬ ПЕРВАЯ И ВТОРАЯ НЕДЕЛЯ, ТО ИЗМЕНИТЬ В .env
 
-LOCALE_FILE = pathlib.Path(WORK_DIRECTORY, 'locals') / 'ru_RU.ini'
+    # Настройки для чекера обновлений
+    telegram_bot_token: str
+    admin_tg_id: int
+    validator_url: str
 
-DEFAULT_TIMEZONE = datetime.timezone.utc
+    admin_password: str
+    postgres_connection_string: str
 
-USER_DATA_VERSION = 1
+    @property
+    def engine(self):
+        return create_async_engine(self.postgres_connection_string)
+
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
+
+
+paths_config = PathsConfig()
+settings = Settings()

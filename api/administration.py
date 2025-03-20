@@ -1,42 +1,82 @@
-from fastapi import APIRouter, HTTPException, Depends, Body, Form, UploadFile, File
+from pathlib import Path
+from typing import List, Optional
+
+import subprocess
+import os
+
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 
-from config import ADMIN_PASSWORD
-from models.api.payloads import DatabaseAction
+from config import settings
+from modules.excel_parser import process_schedule_file
 
-from modules.excel_parser.timetable_excel import initialize_excel_schedules
 
-administration_router = APIRouter(tags=["Администрирование"])
+administration_router = APIRouter(tags=["Administration"])
 security = HTTPBearer()
 
 
 def authenticate_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
     password = credentials.credentials
 
-    if not password == ADMIN_PASSWORD:
+    if not password == settings.admin_password:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 
 
-@administration_router.post("/databaseActions")
-async def database_actions(
-    action: DatabaseAction = Body(),
+@administration_router.post("/uploadNewSchedules")
+async def upload_new_schedules(
+    files: List[UploadFile] = File(...),  # Multiple file uploads
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    Actions: full_reset | reset_schedules(truncate Lessons) | reset_schedules_and_subjects | just_update_raw_schedules
+    Только .xlsx файлы
     """
-    action = action.action
-    if action == "full_reset":
-        await initialize_excel_schedules(full_reset=True)
-    elif action == "reset_schedules":
-        await initialize_excel_schedules(reset_schedules=True)
-        return "reset"
-    elif action == "reset_schedules_and_subjects":
-        await initialize_excel_schedules(reset_schedules_and_subjects=True)
-    elif action == "just_update_raw_schedules":
-        await initialize_excel_schedules()
-    else:
-        return JSONResponse({"msg": "No action provided"})
-    return "Success"
+    for file in files:
+        if Path(file.filename).suffix.lower() != ".xlsx":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Принимаются только .xlsx файлы. Некорректный файл: {file.filename}",
+            )
+    for file in files:
+        await process_schedule_file(file.file)
+
+    return Response(status_code=200)
+
+
+@administration_router.get("/updateValidatorLinks")
+async def upload_new_schedules(
+    upload_all: Optional[bool] = Query(False, alias="uploadAll", description="Точное совпадение"),
+    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
+):
+    """
+
+    uploadAll — принудительно отправляет в валидатор все файлы вместо автоматической отправки только измененных файлов"""
+    try:
+        pid = subprocess.check_output(f"pgrep -f site_updates.py", shell=True).decode().strip()
+
+        if pid:
+            pid = int(pid)
+            try:
+                # Отправляем сигнал SIGTERM (15) для завершения процесса
+                os.kill(pid, 15)
+                return Response(200)
+            except OSError as e:
+                try:
+                    os.kill(pid, 9)
+                    return Response(200)
+                except OSError as e:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Ошибка при принудительном завершении процесса {pid}: {e}"
+                    )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Не удалось найти процесс site_updates.py, возможно, он не запущен"
+            )
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибка при поиске процесса: {e}"
+        )

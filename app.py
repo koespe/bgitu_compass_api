@@ -2,11 +2,13 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from icecream import ic
 
 from api.administration import administration_router
 from api.general import general_router
 from api.schedules import schedules_router
 from api.updates import updates_router
+from config import settings
 
 from database.base import db_init
 
@@ -14,12 +16,14 @@ from database.base import db_init
 async def lifespan():
     await db_init()
 
-    # yield
+    # Отключаем логирование на production
+    if "prod" in settings.admin_password:
+        ic.disable()
 
 
 app = FastAPI(
     title="BGITU Compass API",
-    version="1",
+    version="2.0 (using Validator`s data)",
     on_startup=[lifespan],
     docs_url="/documentation",
     redoc_url=None,
