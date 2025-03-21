@@ -150,7 +150,7 @@ def parse_day(sheet, row, col):
     is_lecture = True if cell.font.bold else False
 
     # Следуя из корпуса получаем время
-    column_time = COLUMN_TIME_BUILDING_1 if building == 1 else COLUMN_TIME_BUILDING_2
+    column_time = COLUMN_TIME_BUILDING_1 if building == "1" else COLUMN_TIME_BUILDING_2
     start_at, end_at = (
         datetime.datetime.strptime(t, "%H.%M").strftime("%H:%M:%S")
         for t in parse_cell(sheet, row, column_time).split("-")
