@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse
 
-from config import paths_config
+from config import paths_config, settings
 from database.base import get_session_fastapi
 from models.api import responses
 from models.database.models import Groups
@@ -40,10 +40,12 @@ async def get_lessons(
     # Цифровые индексы превращаем в строки типа MONDAY, TUESDAY, ...
     for week in json_schedule:
         new_schedule = {}
-        for day, classes in json_schedule[week].items():
+        for day, lessons in json_schedule[week].items():
             day_number = int(day)
             day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
-            new_schedule[day_name] = classes
+            for lesson in lessons:
+                lesson["subjectId"] = 1  # Для совместимости с приложением
+            new_schedule[day_name] = lessons
         json_schedule[week] = new_schedule
 
     response = JSONResponse(content=jsonable_encoder(json_schedule))
@@ -140,7 +142,7 @@ async def find_teacher(
                 continue
 
             week_number = int(current_date.strftime("%V"))  # Номер недели
-            week_type = "first_week" if week_number % 2 == 1 else "second_week"
+            week_type = "first_week" if (week_number % 2 == 0) == settings.swap_weeks else "second_week"
             lessons_find = parse_results.get(week_type, {}).get(str(weekday), [])
             if lessons_find:
                 for lesson in lessons_find:
@@ -240,7 +242,6 @@ def merge_cross_group_classes(lessons):
     Если занятие для потока, то убираем дубликаты и записываем несколько групп в groupName
     """
     unique_lessons = {}
-
     for lesson in lessons:
         # Создаем ключ из всех полей, кроме groupName
         key = (
