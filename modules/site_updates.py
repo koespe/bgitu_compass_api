@@ -8,6 +8,12 @@ import json
 from bs4 import BeautifulSoup
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+import sys
+import os
+
+# Жуткий костыль, но иначе на linux + supervisord не работает
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from config import paths_config
 from config import settings
 
@@ -166,6 +172,8 @@ async def check_for_updates():
     """
     async with aiohttp.ClientSession() as session:
         all_links = await get_all_links(session)
+        if not all_links:  # Сайт лежит
+            return
         current_hashes = {}
         new_files = []
         changed_files = []
