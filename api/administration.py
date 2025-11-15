@@ -45,38 +45,38 @@ async def upload_new_schedules(
 
 
 @administration_router.get("/updateValidatorLinks")
-async def upload_new_schedules(
-    upload_all: Optional[bool] = Query(False, alias="uploadAll", description="Точное совпадение"),
+async def update_validator_links(
+    upload_all: Optional[bool] = Query(False, alias="uploadAll"),
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
+    upload_all = False -> убиваем процесс, в итоге fetch с сайта
+    upload_all = True  -> удаляем файл и убиваем процесс —> отправляем все файлы в валидатор
+    """
+    if upload_all:
+        os.remove("data/schedule_hashes.json")
 
-    uploadAll — принудительно отправляет в валидатор все файлы вместо автоматической отправки только измененных файлов"""
     try:
-        pid = subprocess.check_output(f"pgrep -f site_updates.py", shell=True).decode().strip()
-
-        if pid:
-            pid = int(pid)
-            try:
-                # Отправляем сигнал SIGTERM (15) для завершения процесса
-                os.kill(pid, 15)
-                return Response(200)
-            except OSError as e:
+        pids = subprocess.check_output("pgrep -f site_updates.py", shell=True).decode().strip().split("\n")
+        if pids and pids != [""]:
+            killed_any = False
+            for pid_str in pids:
                 try:
-                    os.kill(pid, 9)
-                    return Response(200)
-                except OSError as e:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Ошибка при принудительном завершении процесса {pid}: {e}"
-                    )
+                    pid = int(pid_str)
+                    os.kill(pid, 15)  # SIGTERM
+                    killed_any = True
+                except OSError:
+                    # Если не удалось отправить SIGTERM, убиваем силой
+                    try:
+                        pid = int(pid_str)
+                        os.kill(pid, 9)
+                        killed_any = True
+                    except Exception:
+                        pass
+            if not killed_any:
+                raise HTTPException(400, detail="Процесс site_updates.py не найден")
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Не удалось найти процесс site_updates.py, возможно, он не запущен"
-            )
+            raise HTTPException(400, detail="Процесс site_updates.py не найден")
+
     except subprocess.CalledProcessError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Ошибка при поиске процесса: {e}"
-        )
+        raise HTTPException(400, detail=f"Ошибка при поиске процесса: {e}")

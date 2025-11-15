@@ -25,8 +25,9 @@ app = FastAPI(
     title="BGITU Compass API",
     version="2.0 (using Validator`s data)",
     on_startup=[lifespan],
-    docs_url="/documentation",
+    docs_url=None,
     redoc_url=None,
+    debug=False
 )
 
 
