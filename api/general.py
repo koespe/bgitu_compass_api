@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi import Depends
 from fastapi.security import HTTPBearer
 
@@ -18,6 +18,11 @@ general_router = APIRouter()
 security = HTTPBearer()
 
 
+@general_router.get("/ping")
+async def ping():
+    return Response(status_code=200)
+
+
 @general_router.get("/groups", tags=["Schedules"], responses={200: {"model": List[responses.Groups]}})
 async def get_groups(
     group_name: Optional[str] = Query(None, alias="groupName", description="Точное совпадение"),
@@ -29,7 +34,14 @@ async def get_groups(
     Без аргументов — все группы
     """
     if search_query is not None:
-        return JSONResponse(await search_group(search_query), status_code=200)
+        if not await search_group(""):
+            return [
+                {"id": -3, "name": "*не нажимайте сюда*"},
+                {"id": -2, "name": "Расписания пока нет"},
+                {"id": -1, "name": "Ожидайте уведомление от приложения!"},
+            ]
+        search_results = await search_group(search_query)
+        return JSONResponse(search_results, status_code=200)
 
     query = select(Groups.id, Groups.name)
     if group_name:
@@ -46,7 +58,8 @@ async def get_groups(
     return JSONResponse(groups_list, status_code=200)
 
 
-# Joke
+# Joke :-)
+@general_router.get("/docs", response_class=HTMLResponse)
 @general_router.get("/", response_class=HTMLResponse)
 async def rickroll():
     """

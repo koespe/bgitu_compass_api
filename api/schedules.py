@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from config import paths_config, settings
 from database.base import get_session_fastapi
@@ -142,7 +142,7 @@ async def find_teacher(
                 continue
 
             week_number = int(current_date.strftime("%V"))  # Номер недели
-            week_type = "first_week" if (week_number % 2 == 0) == settings.swap_weeks else "second_week"
+            week_type = "second_week" if (week_number % 2 == 0) == settings.swap_weeks else "first_week"
             lessons_find = parse_results.get(week_type, {}).get(str(weekday), [])
             if lessons_find:
                 for lesson in lessons_find:
@@ -199,16 +199,15 @@ async def get_schedule_version(request: Request, groupId: int, session: AsyncSes
     В новой версии приложения ответ в json теперь, а в старой — int
     """
     version = request.headers.get("DataVersion")
-    if version is not None:
+    try:
         query = await session.execute(
             select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
         )
         schedule_version = [dict(r._mapping) for r in query]
         return schedule_version[0]
-    else:
-        query = await session.execute(select(Groups.scheduleVersion).where(Groups.id == groupId))
-        schedule_version = query.scalar()
-        return int(schedule_version)
+    except IndexError:
+        return Response(status_code=400)
+
 
 
 @schedules_router.get("/scheduleUpdateDate")
