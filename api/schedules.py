@@ -209,7 +209,8 @@ async def get_schedule_update_date():
     """
     Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)
     """
-    return {"userDataVersion": settings.user_data_version}
+    return {"userDataVersion": settings.user_data_version,
+            "scheduleUploadDate": "2025-04-03 02:01:00"}
 
 
 def is_valid_russian(text: str) -> bool:
