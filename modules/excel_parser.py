@@ -8,7 +8,6 @@ from icecream import ic
 from openpyxl.cell import MergedCell, Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from config import settings
 from data import WEEKDAY_INDEX, WEEKDAYS_LIST
 from database.base import insert_schedule, manage_groups
 
@@ -80,8 +79,6 @@ def parse_group_name(sheet, group_column, groups_row):
 
 
 async def parse_group_schedule(sheet, group_column, schedule_start_row):
-    """Парсит расписание для одной группы."""
-
     schedule_week = {"first_week": {}, "second_week": {}}
     schedule_per_day_first_week = []
     schedule_per_day_second_week = []
@@ -116,8 +113,6 @@ async def parse_group_schedule(sheet, group_column, schedule_start_row):
     schedule_week["first_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
     schedule_week["second_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
 
-    if settings.swap_weeks:
-        schedule_week = {"first_week": schedule_week["second_week"], "second_week": schedule_week["first_week"]}
     return ensure_mag_keys(schedule_week)
 
 

@@ -16,9 +16,7 @@ class PathsConfig(BaseSettings):
 
 
 class Settings(BaseSettings):
-    swap_weeks: bool  # ЕСЛИ СЛОМАЛАСЬ ПЕРВАЯ И ВТОРАЯ НЕДЕЛЯ, ТО ИЗМЕНИТЬ В .env
-
-    # Настройки для чекера обновлений
+    # Настройки для чекера обновлений и уведомлений о новых файлах
     telegram_bot_token: str
     admin_tg_id: int
     validator_url: str
