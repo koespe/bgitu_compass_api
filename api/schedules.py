@@ -137,12 +137,6 @@ async def find_teacher(
                 )
                 parse_results[week][day] = sorted_items
 
-        # if settings.swap_weeks:
-        #     parse_results["first_week"], parse_results["second_week"] = (
-        #         parse_results["second_week"],
-        #         parse_results["first_week"],
-        #     )
-
         start_date = date_from or date.today()
         end_date = date_to or (start_date + datetime.timedelta(days=21))
         current_date = start_date
