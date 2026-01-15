@@ -16,6 +16,8 @@ class PathsConfig(BaseSettings):
 
 
 class Settings(BaseSettings):
+    swap_weeks: bool  # first и second week могут поменять местами
+
     # Настройки для чекера обновлений и уведомлений о новых файлах
     telegram_bot_token: str
     admin_tg_id: int

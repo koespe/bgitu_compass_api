@@ -2,21 +2,21 @@ import calendar
 import datetime
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 import jmespath
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse, Response
+from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import paths_config, settings
 from database.base import get_session_fastapi
 from models.api import responses
 from models.database.models import Groups
-
 
 schedules_router = APIRouter(tags=["Schedules"])
 
@@ -44,9 +44,15 @@ async def get_lessons(
             day_number = int(day)
             day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
             for lesson in lessons:
-                lesson["subjectId"] = 1  # Для совместимости с приложением
+                lesson["subjectId"] = 1  # Для совместимости со старыми версиями приложения
             new_schedule[day_name] = lessons
         json_schedule[week] = new_schedule
+
+    if settings.swap_weeks:
+        json_schedule["first_week"], json_schedule["second_week"] = (
+            json_schedule["second_week"],
+            json_schedule["first_week"],
+        )
 
     response = JSONResponse(content=jsonable_encoder(json_schedule))
     if cache:
@@ -131,6 +137,12 @@ async def find_teacher(
                 )
                 parse_results[week][day] = sorted_items
 
+        # if settings.swap_weeks:
+        #     parse_results["first_week"], parse_results["second_week"] = (
+        #         parse_results["second_week"],
+        #         parse_results["first_week"],
+        #     )
+
         start_date = date_from or date.today()
         end_date = date_to or (start_date + datetime.timedelta(days=21))
         current_date = start_date
@@ -141,8 +153,7 @@ async def find_teacher(
                 current_date += datetime.timedelta(days=1)
                 continue
 
-            week_number = int(current_date.strftime("%V"))  # Номер недели
-            week_type = "second_week" if (week_number % 2 == 0) == settings.swap_weeks else "first_week"
+            week_type = get_week_type(current_date)
             lessons_find = parse_results.get(week_type, {}).get(str(weekday), [])
             if lessons_find:
                 for lesson in lessons_find:
@@ -186,19 +197,9 @@ async def find_teacher(
 
 @schedules_router.get(
     "/scheduleVersion",
-    responses={
-        200: {
-            "model": responses.ScheduleVersion,
-            "description": "В новой версии приложения нужно прокидывать в headers DataVersion",
-        }
-    },
+    responses={200: {"model": responses.ScheduleVersion}},
 )
-async def get_schedule_version(request: Request, groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
-    """
-    В headers есть "DataVersion"
-    В новой версии приложения ответ в json теперь, а в старой — int
-    """
-    version = request.headers.get("DataVersion")
+async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
     try:
         query = await session.execute(
             select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
@@ -207,7 +208,6 @@ async def get_schedule_version(request: Request, groupId: int, session: AsyncSes
         return schedule_version[0]
     except IndexError:
         return Response(status_code=400)
-
 
 
 @schedules_router.get("/scheduleUpdateDate")
@@ -268,3 +268,15 @@ def merge_cross_group_classes(lessons):
             # Если ключ встречается впервые, просто добавляем занятие в словарь
             unique_lessons[key] = lesson.copy()
     return list(unique_lessons.values())
+
+
+def get_week_type(current_date: date) -> str:
+    start_year = current_date.year - 1 if current_date.month < 9 else current_date.year
+    start_date = date(start_year, 9, 1)
+
+    if start_date.isoweekday() == 7:
+        start_date += timedelta(days=1)
+
+    week_num = ((current_date - start_date).days // 7) + 1
+    is_second = (week_num % 2 == 0) != settings.swap_weeks  # без XOR
+    return "second_week" if is_second else "first_week"
