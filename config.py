@@ -12,13 +12,12 @@ class PathsConfig(BaseSettings):
     changelogs: pathlib.Path = work_directory / "data" / "changelogs"
     schedule_hashes: pathlib.Path = work_directory / "data" / "schedule_hashes.json"
 
-    schedule_upload_date: pathlib.Path = work_directory / "data" / "updates" / "scheduleUploadDate.json"
-
 
 class Settings(BaseSettings):
+    user_data_version: int  # Индикатор для приложения о смене учебного года (для обратной совместимости версий)
     swap_weeks: bool  # first и second week могут поменять местами
 
-    # Настройки для чекера обновлений и уведомлений о новых файлах
+    # Настройки для монитора обновлений сайта и уведомлений о новых файлах
     telegram_bot_token: str
     admin_tg_id: int
     validator_url: str
@@ -31,8 +30,8 @@ class Settings(BaseSettings):
         return create_async_engine(self.postgres_connection_string)
 
     class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 paths_config = PathsConfig()

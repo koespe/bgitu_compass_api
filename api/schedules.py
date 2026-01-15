@@ -207,11 +207,9 @@ async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get
 @schedules_router.get("/scheduleUpdateDate")
 async def get_schedule_update_date():
     """
-    В приложении есть userDataVersion - она бесполезна, но надо пока оставить (до 1 сентября 2025 года)
+    Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)
     """
-    with open(paths_config.schedule_upload_date, "r") as f:
-        data = json.load(f)
-    return data
+    return {"userDataVersion": settings.user_data_version}
 
 
 def is_valid_russian(text: str) -> bool:

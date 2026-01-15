@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
 
 from config import settings
+from database.base import db_truncate_groups
 from modules.excel_parser import process_schedule_file
 
 TELEGRAM_BOT_URL = (
@@ -119,3 +120,24 @@ async def set_swap_weeks_state(
     set_key(".env", "SWAP_WEEKS", str(swap_weeks))  # str требуется библиотекой python-dotenv
     settings.swap_weeks = swap_weeks
     return {"swap_weeks": settings.swap_weeks}
+
+
+@administration_router.post("/resetAllData")
+async def increment_user_data_version(
+    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
+):
+    """
+    Использовать только летом при смене учебного года
+    Увеличивает userDataVersion на +1 в .env и очищает таблицу groups
+    """
+    try:
+        current_version = settings.user_data_version
+        new_version = current_version + 1
+        set_key(".env", "USER_DATA_VERSION", str(new_version))
+        await db_truncate_groups()
+        await send_notify_telegram_message(f"userDataVersion увеличен до {new_version}, таблица groups очищена")
+
+        return Response(status_code=200)
+    except Exception as e:
+        await send_notify_telegram_message(f"При переходе на новый учебный год возникла ошибка: {e}")
+        raise HTTPException(status_code=500)
