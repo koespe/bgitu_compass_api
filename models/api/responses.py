@@ -39,5 +39,6 @@ class ScheduleVersion(BaseModel):
 
 class RemoteConfig(BaseModel):
     swapWeeks: bool
+    lastResetTimestamp: int
     versionCode: int
     downloadUrl: HttpUrl

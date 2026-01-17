@@ -4,7 +4,6 @@ from typing import Optional, List
 from pydantic import BaseModel, HttpUrl, Field
 
 
-
 class UploadUpdate(BaseModel):
     versionCode: int
     forceUpdateVersions: List[int]
@@ -13,5 +12,6 @@ class UploadUpdate(BaseModel):
 
 class RemoteConfigUpdate(BaseModel):
     swapWeeks: bool
+    lastResetTimestamp: int
     versionCode: int
     downloadUrl: Optional[str] = None
