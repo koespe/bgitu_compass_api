@@ -1,19 +1,17 @@
 import calendar
 import datetime
-import json
 import re
 from datetime import date, timedelta
 from typing import Optional
 
 import jmespath
-from fastapi import APIRouter, Depends, Request, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import paths_config, settings
+from config import settings
 from database.base import get_session_fastapi
 from models.api import responses
 from models.database.models import Groups
@@ -124,7 +122,6 @@ async def find_teacher(
                             parse_results[week][day] = []
                         parse_results[week][day].extend(subjects)
 
-        # Удаление дубликатов и сортировка по времени
         for week in parse_results:
             for day in parse_results[week]:
                 # Удаляем дубликаты из-за одной группы у потока
@@ -208,6 +205,7 @@ async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get
 async def get_schedule_update_date():
     """
     Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)
+    scheduleUploadDate не играет роли, но это поле требует приложение (Field 'scheduleUploadDate' is required)
     """
     return {"userDataVersion": settings.user_data_version,
             "scheduleUploadDate": "2025-04-03 02:01:00"}
@@ -271,5 +269,5 @@ def get_week_type(current_date: date) -> str:
         start_date += timedelta(days=1)
 
     week_num = ((current_date - start_date).days // 7) + 1
-    is_second = (week_num % 2 == 0) != settings.swap_weeks  # без XOR
+    is_second = (week_num % 2 == 0) != settings.swap_weeks
     return "second_week" if is_second else "first_week"
