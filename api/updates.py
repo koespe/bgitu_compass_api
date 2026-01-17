@@ -1,18 +1,20 @@
+from pathlib import Path
 import hashlib
 import json
 
 import aiohttp
+from dotenv import set_key
 from aiohttp.web_exceptions import HTTPError
 from fastapi import APIRouter, HTTPException, Body, Response
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 from fastapi.responses import JSONResponse, FileResponse
 
 from api.administration import authenticate_admin
 from config import paths_config
 from models.api import payloads, responses
-from pathlib import Path
+from config import settings
+
 
 updates_router = APIRouter(tags=["App updates"])
 security = HTTPBearer()
@@ -112,6 +114,11 @@ async def update_remote_config(
 ):
     config_path = Path(paths_config.remote_config)
     config_data = payload.model_dump()
+
+    # Обновляем swapWeeks в .env файле для быстрого доступа к этой переменной
+    set_key(".env", "SWAP_WEEKS", str(payload.swapWeeks))
+    settings.swap_weeks = payload.swapWeeks
+
     with open(config_path, "w") as f:
         json.dump(config_data, f, indent=2)
 
