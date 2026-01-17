@@ -78,6 +78,15 @@ async def find_teacher(
     Расписание преподавателя
     dateFrom и dateTo — optional, без них возвращается расписание на 3 недели
     """
+    # Проверка чтобы не положить API одним запросом
+    if date_from and date_to:
+        period_days = (date_to - date_from).days
+        if period_days > 60:
+            raise HTTPException(
+                detail="Запрошенный период не может превышать 60 дней",
+                status_code=400
+            )
+    
     if teacher:
         if not is_valid_russian(teacher):
             raise HTTPException(detail="No results", status_code=404)
