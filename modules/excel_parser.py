@@ -69,7 +69,7 @@ def parse_group_name(sheet, group_column, groups_row):
         subgroup = group_name
         group_name = parse_cell(sheet, row=groups_row - 1, col=group_column).strip() + f"({subgroup})"
 
-    group_name = group_name.strip().replace("/", "-").replace("спо", "СПО")
+    group_name = group_name.strip().replace("/", "-").replace(" ", "").replace("спо", "СПО")
 
     ic(group_name)
     return group_name
