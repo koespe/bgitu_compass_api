@@ -33,6 +33,9 @@ async def upload_new_version(
     payload: payloads.UploadUpdate,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    Will be deprecated soon
+    """
     async with aiohttp.ClientSession() as session:
         async with session.get(payload.downloadUrl) as response:
             try:

@@ -39,6 +39,6 @@ class ScheduleVersion(BaseModel):
 
 class RemoteConfig(BaseModel):
     swapWeeks: bool
-    lastResetTimestamp: int
+    lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
     downloadUrl: HttpUrl
