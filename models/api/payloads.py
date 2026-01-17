@@ -13,6 +13,5 @@ class UploadUpdate(BaseModel):
 
 class RemoteConfigUpdate(BaseModel):
     swapWeeks: bool
-    userDataVersion: int
     versionCode: int
     downloadUrl: Optional[str] = None
