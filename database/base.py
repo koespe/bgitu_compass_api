@@ -80,6 +80,19 @@ async def db_truncate_groups():
         await conn.run_sync(groups_table.truncate)
 
 
+async def increment_schedule_version():
+    async with get_session() as session:
+        # Get all groups
+        query = await session.execute(select(Groups))
+        groups = query.scalars().all()
+
+        for group in groups:
+            group.scheduleVersion += 1
+            group.forceUpdateVersion += 1
+        
+        await session.commit()
+
+
 @asynccontextmanager
 async def get_session():
     try:
