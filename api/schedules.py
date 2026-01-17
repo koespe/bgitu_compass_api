@@ -82,11 +82,8 @@ async def find_teacher(
     if date_from and date_to:
         period_days = (date_to - date_from).days
         if period_days > 60:
-            raise HTTPException(
-                detail="Запрошенный период не может превышать 60 дней",
-                status_code=400
-            )
-    
+            raise HTTPException(detail="Запрошенный период не может превышать 60 дней", status_code=400)
+
     if teacher:
         if not is_valid_russian(teacher):
             raise HTTPException(detail="No results", status_code=404)
@@ -197,9 +194,13 @@ async def find_teacher(
 
 @schedules_router.get(
     "/scheduleVersion",
+    tags=["Will be deprecated soon"],
     responses={200: {"model": responses.ScheduleVersion}},
 )
 async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
+    """
+    Will be deprecated soon
+    """
     try:
         query = await session.execute(
             select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
@@ -216,8 +217,7 @@ async def get_schedule_update_date():
     Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)
     scheduleUploadDate не играет роли, но это поле требует приложение (Field 'scheduleUploadDate' is required)
     """
-    return {"userDataVersion": settings.user_data_version,
-            "scheduleUploadDate": "2025-04-03 02:01:00"}
+    return {"userDataVersion": settings.user_data_version, "scheduleUploadDate": "2025-04-03 02:01:00"}
 
 
 def is_valid_russian(text: str) -> bool:
