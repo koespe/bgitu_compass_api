@@ -35,3 +35,10 @@ class Groups(BaseModel):
 class ScheduleVersion(BaseModel):
     scheduleVersion: int
     forceUpdateVersion: int
+
+
+class RemoteConfig(BaseModel):
+    swapWeeks: bool
+    userDataVersion: int
+    versionCode: int
+    downloadUrl: HttpUrl

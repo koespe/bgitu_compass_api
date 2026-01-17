@@ -9,6 +9,7 @@ class PathsConfig(BaseSettings):
     work_directory: pathlib.Path = pathlib.Path(".")
     apk_file: pathlib.Path = work_directory / "data" / "updates" / "bgitu_compass.apk"
     updates_remote_config: pathlib.Path = work_directory / "data" / "updates" / "update_remote_config.json"
+    remote_config: pathlib.Path = work_directory / "data" / "remote_config.json"
     changelogs: pathlib.Path = work_directory / "data" / "changelogs"
     schedule_hashes: pathlib.Path = work_directory / "data" / "schedule_hashes.json"
 

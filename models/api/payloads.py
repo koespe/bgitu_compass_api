@@ -9,3 +9,10 @@ class UploadUpdate(BaseModel):
     versionCode: int
     forceUpdateVersions: List[int]
     downloadUrl: str
+
+
+class RemoteConfigUpdate(BaseModel):
+    swapWeeks: bool
+    userDataVersion: int
+    versionCode: int
+    downloadUrl: Optional[str] = None

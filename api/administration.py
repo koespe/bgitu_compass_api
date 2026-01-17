@@ -105,18 +105,24 @@ async def update_validator_links(
     return Response(status_code=200)
 
 
-@administration_router.get("/swapWeeks")
+@administration_router.get("/swapWeeks", tags=["Will be deprecated soon"])
 async def get_swap_weeks_state(
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    Will be deprecated soon
+    """
     return {"swap_weeks": settings.swap_weeks}
 
 
-@administration_router.post("/swapWeeks")
+@administration_router.post("/swapWeeks", tags=["Will be deprecated soon"])
 async def set_swap_weeks_state(
     swap_weeks: bool,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    Will be deprecated soon
+    """
     set_key(".env", "SWAP_WEEKS", str(swap_weeks))  # str требуется библиотекой python-dotenv
     settings.swap_weeks = swap_weeks
 

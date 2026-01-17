@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from api.administration import authenticate_admin
 from config import paths_config
 from models.api import payloads, responses
+from pathlib import Path
 
 updates_router = APIRouter(tags=["App updates"])
 security = HTTPBearer()
@@ -27,7 +28,7 @@ async def upload_new_version(
     return JSONResponse({"detail": "Upload completed successfully"}, status_code=200)
 
 
-@updates_router.post("/updateRemoteConfig")
+@updates_router.post("/updateRemoteConfig", tags=["Will be deprecated soon"])
 async def upload_new_version(
     payload: payloads.UploadUpdate,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
@@ -58,7 +59,9 @@ async def upload_new_version(
     return Response(status_code=200)
 
 
-@updates_router.get("/updateAvailability", responses={200: {"model": responses.UpdateAvailability}})
+@updates_router.get(
+    "/updateAvailability", tags=["Will be deprecated soon"], responses={200: {"model": responses.UpdateAvailability}}
+)
 async def update_availability():
     with open(paths_config.updates_remote_config, "r") as f:
         data = json.load(f)
@@ -87,3 +90,26 @@ async def get_changelog(version: int):
         )
     else:
         raise HTTPException(status_code=404, detail=f"Changelog отсутствует для версии = {version}")
+
+
+@updates_router.get("/remoteConfig", responses={200: {"model": responses.RemoteConfig}})
+async def get_remote_config():
+    config_path = Path(paths_config.remote_config)
+    if not config_path.exists():
+        raise HTTPException(status_code=404, detail="Remote config file not found")
+
+    with open(config_path, "r") as f:
+        return json.load(f)
+
+
+@updates_router.post("/remoteConfig")
+async def update_remote_config(
+    payload: payloads.RemoteConfigUpdate,
+    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
+):
+    config_path = Path(paths_config.remote_config)
+    config_data = payload.model_dump()
+    with open(config_path, "w") as f:
+        json.dump(config_data, f, indent=2)
+
+    return JSONResponse({"detail": "Success"}, status_code=200)
