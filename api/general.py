@@ -34,12 +34,6 @@ async def get_groups(
     Без аргументов — все группы
     """
     if search_query is not None:
-        if not await search_group(""):
-            return [
-                {"id": -3, "name": "*не нажимайте сюда*"},
-                {"id": -2, "name": "Расписания пока нет"},
-                {"id": -1, "name": "Ожидайте уведомление от приложения!"},
-            ]
         search_results = await search_group(search_query)
         return JSONResponse(search_results, status_code=200)
 
