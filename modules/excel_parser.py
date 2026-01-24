@@ -110,7 +110,7 @@ async def parse_group_schedule(sheet, group_column, schedule_start_row):
     schedule_week["first_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
     schedule_week["second_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
 
-    return ensure_mag_keys(schedule_week)
+    return ensure_weekdays_keys(schedule_week)
 
 
 def parse_day(sheet, row, col):
@@ -155,23 +155,26 @@ def parse_day(sheet, row, col):
     else:
         additional_data = ""
 
+    classroom = ""
+    teacher = ""
     classrooms_count = cell_value.count("№") + cell_value.upper().count("ДОТ")
     if classrooms_count == 0:  # Преподаватель отсутствует и строчка из себя представляет название предмета
-        classroom = ""
-        teacher = ""
-        is_lecture = False
+        is_lecture = False  # На всякий случай
     elif classrooms_count == 1:
         teacher = re.search(r"\((.*?)\)", cell_value).group(1)
-        cell_value = re.sub(r"\([^)]*\)", "", cell_value)  # Убираем из строки
+        cell_value = re.sub(r"\([^)]*\)", "", cell_value)  # Убираем из строки преподавателя
 
         if "ДОТ" in cell_value.upper():
             building = "ДОТ"
             classroom = "ДОТ"
             cell_value = cell_value.replace("ДОТ", "").replace("дот", "")
-        else:
+        else:  # Это нормальная пара
             classroom = re.search(r"№(\S+)", cell_value).group(1)
-            cell_value = re.sub(r"№\S+", "", cell_value).strip()
-    else:  # 2 преподавателя
+            if "/" in classroom:  # "123/321" — разделение на первую/вторую недели
+                bottom_cell_value = parse_cell(sheet, row + 1, col)
+                classroom = classroom.split("/")[0 if cell.value == bottom_cell_value else 1]
+            cell_value = re.sub(r"№\S+", "", cell_value).strip()  # Убираем из строки аудиторию
+    elif classrooms_count == 2:
         # В этом случае первое значение — группа А, второе — Б
         teachers = [match.group(1) for match in re.finditer(r"\((.*?)\)", cell_value)]
         classrooms = [match.group(1) for match in re.finditer(r"№(\S+)", cell_value)]
@@ -181,18 +184,12 @@ def parse_day(sheet, row, col):
         cell_value = cell_value.replace(",", "")  # Между преподавателями остается запятая
 
         right_cell_value = parse_cell(sheet, row, col + 1)
-        if cell.value == right_cell_value:  # Это группа "А"
-            classroom = classrooms[0]
-            teacher = teachers[0]
-        else:  # Это группа "Б"
-            classroom = classrooms[1]
-            teacher = teachers[1]
+        is_group_a = cell.value == right_cell_value
+        classroom = classrooms[0 if is_group_a else 1]
+        teacher = teachers[0 if is_group_a else 1]
 
     subject_name = cell_value.strip()
-    ic(subject_name)
     subject_name = subject_name[0].upper() + subject_name[1:]
-    if subject_name and subject_name[-1] == ".":
-        subject_name = subject_name[:-1].strip()
     subject_name += additional_data
 
     teacher = standardize_names(teacher)
@@ -231,34 +228,22 @@ def parse_cell(sheet: Worksheet, row, col, using_merged=True, return_value=True)
 def standardize_names(s):
     if s != "" and s is not None:
         s = s.replace(",", "")
-
-        # Вставка пробела между фамилией и инициалами, если они слиплись
-        s = re.sub(r"([А-Яа-яЁёA-Za-z]+)([А-Я]\.[А-Я]\.)$", r"\1 \2", s)
-
         s = s.strip()
-        # Замена точек и пробелов на символ ';'
-        s = re.sub(r"[. ]", ";", s)
-        while ";" in s:
-            s = s.replace(";;", " ").replace(";", " ")
 
-        s = s.strip()
-        buff = list(s)
-        buff[-2] = "."
-        s = "".join(buff)
+        # Замена множественных пробелов на один
+        s = re.sub(r"\s+", " ", s)
 
-        # Если последний символ не точка, добавить точку
-        if s[-1] != ".":
-            s += "."
+        # Убираем пробелы между инициалами
+        s = re.sub(r"([А-ЯЁA-Z])\.\s+([А-ЯЁA-Z]\.)", r"\1.\2", s)
     return s
 
 
-def ensure_mag_keys(schedule_dict):
+def ensure_weekdays_keys(schedule_dict):
     """
-    Чтобы не переписывать парсер, можно допускать перепрыгивание ВТ и ЧТ в магистратуре (вся учеба только в ПТ и СБ)
-    Но в этом случае отсутствуют ключи в словаре, тут их добавляем
+    В магистратуре может не оказаться какого-то дня недели, так что добавляем их
     """
     for week in ["first_week", "second_week"]:
-        for day in [2, 4]:
+        for day in range(1, 7):
             if day not in schedule_dict[week]:
                 schedule_dict[week][day] = []
 
