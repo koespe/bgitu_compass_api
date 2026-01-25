@@ -8,13 +8,11 @@ import subprocess
 import os
 
 import aiohttp
-from dotenv import set_key
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
 
 from config import settings, paths_config
-from database.base import increment_schedule_version
 from models.api.payloads import TeachersInfo
 from modules.excel_parser import process_schedule_file
 

@@ -30,14 +30,11 @@ async def upload_new_version(
     return JSONResponse({"detail": "Upload completed successfully"}, status_code=200)
 
 
-@updates_router.post("/updateRemoteConfig", tags=["Will be deprecated soon"])
+@updates_router.post("/updateRemoteConfig", deprecated=True)
 async def upload_new_version(
     payload: payloads.UploadUpdate,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
-    """
-    Will be deprecated soon
-    """
     async with aiohttp.ClientSession() as session:
         async with session.get(payload.downloadUrl) as response:
             try:
@@ -64,9 +61,7 @@ async def upload_new_version(
     return Response(status_code=200)
 
 
-@updates_router.get(
-    "/updateAvailability", tags=["Will be deprecated soon"], responses={200: {"model": responses.UpdateAvailability}}
-)
+@updates_router.get("/updateAvailability", deprecated=True, responses={200: {"model": responses.UpdateAvailability}})
 async def update_availability():
     with open(paths_config.updates_remote_config, "r") as f:
         data = json.load(f)

@@ -195,13 +195,10 @@ async def find_teacher(
 
 @schedules_router.get(
     "/scheduleVersion",
-    tags=["Will be deprecated soon"],
+    deprecated=True,
     responses={200: {"model": responses.ScheduleVersion}},
 )
 async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
-    """
-    Will be deprecated soon
-    """
     try:
         query = await session.execute(
             select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
@@ -212,7 +209,7 @@ async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get
         return Response(status_code=400)
 
 
-@schedules_router.get("/scheduleUpdateDate")
+@schedules_router.get("/scheduleUpdateDate", deprecated=True)
 async def get_schedule_update_date():
     """
     Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)

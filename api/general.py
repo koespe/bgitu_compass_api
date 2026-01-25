@@ -8,7 +8,7 @@ from fastapi.security import HTTPBearer
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from models.api import responses
 from models.api.responses import Teacher
@@ -19,11 +19,6 @@ from config import paths_config
 
 general_router = APIRouter()
 security = HTTPBearer()
-
-
-@general_router.get("/ping")
-async def ping():
-    return Response(status_code=200)
 
 
 @general_router.get("/groups", tags=["Schedules"], responses={200: {"model": List[responses.Groups]}})
@@ -65,9 +60,12 @@ async def get_teachers_info():
         return json.load(f)
 
 
-@general_router.get("/docs", response_class=HTMLResponse)
-@general_router.get("/", response_class=HTMLResponse)
+@general_router.get("/docs", response_class=HTMLResponse, include_in_schema=False)
+@general_router.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def plug():
+    """
+    Заглушка для проекта
+    """
     return (
         "Очень интересно, что ты стал исследовать API проекта. "
         "Если хочешь получить доступ к документации или улучшить проект, пиши —> "
