@@ -12,6 +12,7 @@ class PathsConfig(BaseSettings):
     remote_config: pathlib.Path = work_directory / "data" / "remote_config.json"
     changelogs: pathlib.Path = work_directory / "data" / "changelogs"
     schedule_hashes: pathlib.Path = work_directory / "data" / "schedule_hashes.json"
+    teachers_info: pathlib.Path = work_directory / "data" / "teachers_info.json"
 
 
 class Settings(BaseSettings):

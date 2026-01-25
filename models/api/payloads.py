@@ -15,3 +15,12 @@ class RemoteConfigUpdate(BaseModel):
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
     downloadUrl: Optional[str] = None
+
+
+class Teacher(BaseModel):
+    name: str
+    departments: str
+
+
+class TeachersInfo(BaseModel):
+    teachers: list[Teacher]

@@ -60,6 +60,7 @@ async def get_lessons(
 
 @schedules_router.get(
     "/v2/teacherSearch",
+    tags=["Teachers"],
     responses={
         200: {
             "model": responses.TeacherLocations,

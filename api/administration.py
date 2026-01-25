@@ -1,4 +1,5 @@
 import asyncio
+import json
 import urllib.parse
 from pathlib import Path
 from typing import List, Optional
@@ -12,8 +13,9 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
 
-from config import settings
+from config import settings, paths_config
 from database.base import increment_schedule_version
+from models.api.payloads import TeachersInfo
 from modules.excel_parser import process_schedule_file
 
 TELEGRAM_BOT_URL = (
@@ -102,4 +104,14 @@ async def update_validator_links(
         raise HTTPException(400, detail=f"Ошибка при поиске процесса: {e}")
 
     await asyncio.sleep(20)  # Для лучшего понимания задержки на сайте валидатора
+    return Response(status_code=200)
+
+
+@administration_router.post("/teachersInfo")
+async def post_teachers_info(
+    data: TeachersInfo,
+    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
+):
+    with open(paths_config.teachers_info, 'w', encoding='utf-8') as f:
+        json.dump(data.model_dump(), f, ensure_ascii=False, indent=4)
     return Response(status_code=200)

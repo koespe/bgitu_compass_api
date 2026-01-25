@@ -1,17 +1,20 @@
+import json
+from pathlib import Path
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi import Depends
 from fastapi.security import HTTPBearer
 
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 
 from models.api import responses
+from models.api.responses import Teacher
 from models.database.models import Groups
 from database.base import get_session_fastapi, search_group
+from config import paths_config
 
 
 general_router = APIRouter()
@@ -52,11 +55,21 @@ async def get_groups(
     return JSONResponse(groups_list, status_code=200)
 
 
-# Joke :-)
+@general_router.get("/teachersInfo", tags=["Teachers"], response_model=list[Teacher])
+async def get_teachers_info():
+    teachers_info = Path(paths_config.teachers_info)
+    if not teachers_info.exists():
+        raise HTTPException(status_code=404, detail="Для начала создайте файл teachers_info.json через POST запрос")
+
+    with open(teachers_info, "r") as f:
+        return json.load(f)
+
+
 @general_router.get("/docs", response_class=HTMLResponse)
 @general_router.get("/", response_class=HTMLResponse)
-async def rickroll():
-    """
-    RickRoll если кто-то захочет исследовать api
-    """
-    return RedirectResponse("https://youtu.be/-cctf5hP900?si=Qm9q8RzFWVyGCKrH&t=466")
+async def plug():
+    return (
+        "Очень интересно, что ты стал исследовать API проекта. "
+        "Если хочешь получить доступ к документации или улучшить проект, пиши —> "
+        '<a href="https://t.me/koespe">https://t.me/koespe</a>'
+    )
