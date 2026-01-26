@@ -29,9 +29,6 @@ TELEGRAM_BOT_URL = (
 # In-memory флаг для уведомлений о пустых списках
 last_empty_notification = {}
 
-# In-memory флаг для отслеживания состояния доступности сайта
-site_unavailable_notified = False
-
 
 async def send_telegram_message(message):
     async with aiohttp.ClientSession() as session:
@@ -147,22 +144,13 @@ async def notify_empty_page(url, notification_messages):
 
 
 async def check_for_updates():
-    global site_unavailable_notified
     async with aiohttp.ClientSession() as session:
         notification_messages = []
         all_links = await get_all_links(session, notification_messages)
 
         # Сайт считается недоступным, если не найдено ссылок
         if not all_links:
-            if not site_unavailable_notified:
-                await send_telegram_message("Сайт недоступен, не удалось загрузить расписания")
-                site_unavailable_notified = True
             return
-
-        # Если мы здесь, то сайт доступен. Проверяем, не был ли он недоступен ранее.
-        if site_unavailable_notified:
-            notification_messages.append("Сайт снова доступен")
-            site_unavailable_notified = False
 
         try:
             with open(paths_config.schedule_hashes, "r", encoding="utf-8") as f:
@@ -209,8 +197,6 @@ async def check_for_updates():
 
         if notification_messages:
             await send_telegram_message("\n".join(notification_messages))
-
-        # print(f"Processed {len(all_links)} links, {len(files_to_process)} updated files")
 
 
 async def main():
