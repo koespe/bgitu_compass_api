@@ -110,6 +110,12 @@ async def post_teachers_info(
     data: TeachersInfo,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
-    with open(paths_config.teachers_info, 'w', encoding='utf-8') as f:
-        json.dump(data.model_dump(), f, ensure_ascii=False, indent=4)
+    transformed_data = [
+        {"name": teacher.name, "departments": [dept.strip() for dept in teacher.departments.split("+")]}
+        for teacher in data.teachers
+    ]
+
+    with open(paths_config.teachers_info, "w", encoding="utf-8") as f:
+        json.dump(transformed_data, f, ensure_ascii=False, indent=4)
+
     return Response(status_code=200)
