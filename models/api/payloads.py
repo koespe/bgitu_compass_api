@@ -1,5 +1,4 @@
-from datetime import date
-from typing import Optional, List
+from typing import List
 
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -14,7 +13,8 @@ class RemoteConfigUpdate(BaseModel):
     swapWeeks: bool
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
-    downloadUrl: Optional[str] = None
+    downloadUrl: HttpUrl
+    pingHost: str = Field(..., example="gstatic.com", description="Только ip и домены без роутов и протоколов")
 
 
 class Teacher(BaseModel):
