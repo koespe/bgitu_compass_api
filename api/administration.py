@@ -126,7 +126,6 @@ async def post_teachers_info(
         json.dump(transformed_data, f, ensure_ascii=False, indent=4)
 
     validator_data = [teacher.name for teacher in data.teachers]
-    print(validator_data)
     async with aiohttp.ClientSession() as session:
         async with session.post(
             url=settings.validator_url + "teachers/upload",
