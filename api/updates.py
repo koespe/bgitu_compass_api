@@ -27,7 +27,7 @@ async def upload_new_version(
 ):
     with open(paths_config.apk_file, "w+b") as file_in_dir:
         file_in_dir.write(update_file)
-    return JSONResponse({"detail": "Upload completed successfully"}, status_code=200)
+    return JSONResponse({"detail": "Файл успешно обновлен"})
 
 
 @updates_router.post("/updateRemoteConfig", deprecated=True)
@@ -58,7 +58,7 @@ async def upload_new_version(
 
     with open(paths_config.apk_file, "w+b") as file_in_dir:
         file_in_dir.write(update_file_bytes)
-    return Response(status_code=200)
+    return Response()
 
 
 @updates_router.get("/updateAvailability", deprecated=True, responses={200: {"model": responses.UpdateAvailability}})
@@ -76,7 +76,7 @@ def use_body(
 ):
     with open(paths_config.changelogs / f"{version}.md", "wb") as changelog_file:
         changelog_file.write(changelog)
-    return Response(status_code=200)
+    return Response()
 
 
 @updates_router.get("/changelog")
@@ -89,14 +89,14 @@ async def get_changelog(version: int):
             media_type="text/markdown",
         )
     else:
-        raise HTTPException(status_code=404, detail=f"Changelog отсутствует для версии = {version}")
+        raise HTTPException(status_code=404, detail=f"Changelog отсутствует для версии {version}")
 
 
 @updates_router.get("/remoteConfig", responses={200: {"model": responses.RemoteConfig}})
 async def get_remote_config():
     config_path = Path(paths_config.remote_config)
     if not config_path.exists():
-        raise HTTPException(status_code=404, detail="Remote config file not found")
+        raise HTTPException(status_code=404, detail="Для начала создайте файл remote_config.json через POST запрос")
 
     with open(config_path, "r") as f:
         return json.load(f)
@@ -117,4 +117,4 @@ async def update_remote_config(
     with open(config_path, "w") as f:
         json.dump(config_data, f, indent=2)
 
-    return JSONResponse({"detail": "Success"}, status_code=200)
+    return JSONResponse({"detail": "Success"})

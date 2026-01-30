@@ -8,6 +8,7 @@ import subprocess
 import os
 
 import aiohttp
+from aiohttp import BasicAuth
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
@@ -47,7 +48,9 @@ async def upload_new_schedules(
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    Только .xlsx файлы
+    Вызывается автоматически валидатором, но можно добавить файлы вручную.
+
+    Принимаются только .xlsx файлы
     """
     filenames = []
     for file in files:
@@ -61,7 +64,7 @@ async def upload_new_schedules(
         await process_schedule_file(file.file)
 
     await send_notify_telegram_message(message="Обновлены файлы:\n" + "\n".join(filenames))
-    return Response(status_code=200)
+    return Response()
 
 
 @administration_router.get("/updateValidatorLinks")
@@ -70,8 +73,9 @@ async def update_validator_links(
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    upload_all = False -> убиваем процесс, в итоге fetch с сайта
-    upload_all = True  -> удаляем файл и убиваем процесс —> отправляем все файлы в валидатор
+    `upload_all` = `False` -> убиваем процесс, в итоге fetch с сайта
+
+    `upload_all` = `True` -> удаляем файл и убиваем процесс —> отправляем все файлы в валидатор
     """
     if upload_all:
         os.remove("data/schedule_hashes.json")
@@ -102,7 +106,7 @@ async def update_validator_links(
         raise HTTPException(400, detail=f"Ошибка при поиске процесса: {e}")
 
     await asyncio.sleep(20)  # Для лучшего понимания задержки на сайте валидатора
-    return Response(status_code=200)
+    return Response()
 
 
 @administration_router.post("/teachersInfo")
@@ -110,6 +114,9 @@ async def post_teachers_info(
     data: TeachersInfo,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    При изменениях в валидаторе во вкладке "Преподаватели" сюда приходят обновленные данные из Google Sheets
+    """
     transformed_data = [
         {"name": teacher.name, "departments": [dept.strip() for dept in teacher.departments.split("+")]}
         for teacher in data.teachers
@@ -118,4 +125,18 @@ async def post_teachers_info(
     with open(paths_config.teachers_info, "w", encoding="utf-8") as f:
         json.dump(transformed_data, f, ensure_ascii=False, indent=4)
 
-    return Response(status_code=200)
+    validator_data = [teacher.name for teacher in data.teachers]
+    print(validator_data)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url=settings.validator_url + "teachers/upload",
+            auth=BasicAuth(login="uploader", password=settings.admin_password),
+            json=validator_data,
+        ) as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=response.status,
+                    detail=f"Ошибка при отправке данных в валидатор: {await response.text()}",
+                )
+
+    return Response()

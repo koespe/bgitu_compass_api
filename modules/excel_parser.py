@@ -4,7 +4,6 @@ import re
 from typing import Union
 
 import openpyxl
-from icecream import ic
 from openpyxl.cell import MergedCell, Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -34,7 +33,6 @@ async def process_schedule_file(file):
             if "корпус" in cell.lower():
                 groups_row = row_number
                 break
-    ic(groups_row)
 
     """ Определяем клетку, где появляется понедельник. В БАК 2 клетки, в МАГ одна
     В БАК группа обычно состоит из 2х merged cell в высоту, но в нижней бывают подгруппы "а" и "б".
@@ -47,7 +45,6 @@ async def process_schedule_file(file):
                 schedule_start_row = row_number
                 groups_row = schedule_start_row - 1
                 break
-    ic(schedule_start_row)
 
     for group_column in range(4, sheet.max_column + 1):
         group_name = parse_group_name(sheet, group_column, groups_row)
@@ -56,7 +53,6 @@ async def process_schedule_file(file):
         group_id = await manage_groups(group_name)
 
         schedule_week = await parse_group_schedule(sheet, group_column, schedule_start_row)
-        ic(schedule_week)
         await insert_schedule(group_id, schedule_week)
 
 
@@ -71,7 +67,6 @@ def parse_group_name(sheet, group_column, groups_row):
 
     group_name = group_name.strip().replace("/", "-").replace(" ", "").replace("спо", "СПО")
 
-    ic(group_name)
     return group_name
 
 
@@ -221,7 +216,6 @@ def parse_cell(sheet: Worksheet, row, col, using_merged=True, return_value=True)
             return cell
     else:
         value = cell.value
-    ic(row, col, value)
     return value
 
 
