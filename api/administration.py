@@ -8,7 +8,6 @@ import subprocess
 import os
 
 import aiohttp
-from aiohttp import BasicAuth
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
@@ -124,18 +123,5 @@ async def post_teachers_info(
 
     with open(paths_config.teachers_info, "w", encoding="utf-8") as f:
         json.dump(transformed_data, f, ensure_ascii=False, indent=4)
-
-    validator_data = [teacher.name for teacher in data.teachers]
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url=settings.validator_url + "teachers/upload",
-            auth=BasicAuth(login="uploader", password=settings.admin_password),
-            json=validator_data,
-        ) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=response.status,
-                    detail=f"Ошибка при отправке данных в валидатор: {await response.text()}",
-                )
 
     return Response()
