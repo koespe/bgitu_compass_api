@@ -18,6 +18,8 @@ from models.database.models import Groups
 from database.base import get_session_fastapi
 from config import paths_config, settings
 
+import calendar
+
 teachers_router = APIRouter(tags=["Teachers"])
 security = HTTPBearer()
 
@@ -115,7 +117,18 @@ async def teacher_schedule(
                 parse_results[week][day] = sorted_items
 
         if not teacher_search:
-            return merge_cross_group_classes_weekly(parse_results)
+            merged_schedule = merge_cross_group_classes_weekly(parse_results)
+
+            # Для приложения: цифровые индексы превращаем в строки типа MONDAY, TUESDAY, ...
+            for week in merged_schedule:
+                new_schedule = {}
+                for day, lessons in merged_schedule[week].items():
+                    day_number = int(day)
+                    day_name = calendar.day_name[day_number - 1].upper()
+                    new_schedule[day_name] = lessons
+                merged_schedule[week] = new_schedule
+
+            return merged_schedule
         else:
             start_date = date.today()
             end_date = start_date + timedelta(days=21)
