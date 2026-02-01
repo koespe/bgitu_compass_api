@@ -196,7 +196,8 @@ async def check_missing_teachers(
     groups_data = result.all()
 
     # Проверяем каждую группу на наличие преподавателей, которых нет в списке
-    missing_teachers_result = []
+    # Создаем словарь для отслеживания, в каких группах встречается каждый преподаватель
+    teacher_to_groups = {}
 
     for group in groups_data:
         group_name = group.name
@@ -215,8 +216,15 @@ async def check_missing_teachers(
                     if teacher_name and teacher_name not in teacher_short_names:
                         missing_teachers_in_group.add(teacher_name)
 
-        # Если есть отсутствующие преподаватели в этой группе, добавляем в результат
-        if missing_teachers_in_group:
-            missing_teachers_result.append({"group": group_name, "unknownTeacher": list(missing_teachers_in_group)})
+        # Для каждого отсутствующего преподавателя в этой группе добавляем группу в список
+        for teacher in missing_teachers_in_group:
+            if teacher not in teacher_to_groups:
+                teacher_to_groups[teacher] = []
+            teacher_to_groups[teacher].append(group_name)
+
+    # Формируем финальный результат, объединяя преподавателей по группам
+    missing_teachers_result = []
+    for teacher, groups in teacher_to_groups.items():
+        missing_teachers_result.append({"group": ", ".join(groups), "unknownTeacher": [teacher]})
 
     return missing_teachers_result
