@@ -1,13 +1,12 @@
 import re
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from models.database.models import *
-
 
 engine = settings.engine
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)  # Пусть последнее останется
@@ -85,6 +84,7 @@ async def insert_schedule(group_id, schedule, is_forced=True):
         query = await session.execute(select(Groups).where(Groups.id == group_id))
         group = query.scalar()
         group.rawSchedule = schedule
+        group.scheduleUpdateDate = datetime.now(ZoneInfo("Europe/Moscow"))
 
         group.scheduleVersion += 1
         if is_forced:

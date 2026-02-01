@@ -1,22 +1,21 @@
 import asyncio
 import json
+import os
+import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import List, Optional
 
-import subprocess
-import os
-
 import aiohttp
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
-from sqlalchemy import delete
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, paths_config
 from database.base import get_session_fastapi
-from models.api.payloads import TeachersInfo
+from models.api import payloads, responses
 from models.database.models import Groups
 from modules.excel_parser import process_schedule_file
 
@@ -114,7 +113,7 @@ async def update_validator_links(
 
 @administration_router.post("/teachersInfo")
 async def post_teachers_info(
-    data: TeachersInfo,
+    data: payloads.TeachersInfo,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
@@ -129,6 +128,23 @@ async def post_teachers_info(
         json.dump(transformed_data, f, ensure_ascii=False, indent=4)
 
     return Response()
+
+
+@administration_router.get("/groupsInfo", response_model=responses.GroupsInfo)
+async def get_groups_info(
+    session: AsyncSession = Depends(get_session_fastapi),
+):
+    """
+    Используется в валидаторе для администрирования групп
+    """
+    result = await session.execute(select(Groups.id, Groups.name, Groups.scheduleUpdateDate))
+    groups_data = result.all()
+
+    groups_info = []
+    for group in groups_data:
+        groups_info.append({"id": group.id, "name": group.name, "scheduleUpdateDate": group.scheduleUpdateDate})
+
+    return groups_info
 
 
 @administration_router.delete("/deleteGroup/{group_id}")
@@ -154,9 +170,6 @@ async def check_missing_teachers(
     Проверяет все группы в rawSchedule и проверяет наличие преподавателей в списке fullTeacherName
     Возвращает список групп с отсутствующими преподавателями
     """
-    from sqlalchemy import select
-    from models.database.models import Groups
-
     # Получаем список всех преподавателей из файла teachers_info
     teachers_info_path = Path(paths_config.teachers_info)
     if not teachers_info_path.exists():

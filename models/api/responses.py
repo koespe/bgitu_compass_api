@@ -1,5 +1,5 @@
-from datetime import date, time
-from typing import List
+from datetime import date, time, datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -30,6 +30,12 @@ class TeacherLocations(BaseModel):
 class Groups(BaseModel):
     id: int
     name: str
+
+
+class GroupsInfo(BaseModel):
+    id: int
+    name: str
+    scheduleUpdateDate: Optional[datetime] = None
 
 
 class ScheduleVersion(BaseModel):

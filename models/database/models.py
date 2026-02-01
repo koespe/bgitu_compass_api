@@ -1,8 +1,10 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from sqlalchemy import Column
-from sqlalchemy import Integer, String
+from sqlalchemy import Integer, String, DateTime
 from sqlalchemy.orm import declarative_base
 from sqlalchemy_json import MutableJson
-
 
 Base = declarative_base()
 
@@ -15,3 +17,4 @@ class Groups(Base):
     rawSchedule = Column(MutableJson)
     scheduleVersion = Column(Integer, default=0)
     forceUpdateVersion = Column(Integer, default=0)
+    scheduleUpdateDate = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Europe/Moscow")))
