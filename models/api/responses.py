@@ -1,4 +1,4 @@
-from datetime import date, time, datetime
+from datetime import date, time
 from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
@@ -35,7 +35,7 @@ class Groups(BaseModel):
 class GroupsInfo(BaseModel):
     id: int
     name: str
-    scheduleUpdateDate: Optional[datetime] = None
+    scheduleUpdateDate: Optional[int] = None
 
 
 class ScheduleVersion(BaseModel):
@@ -48,6 +48,9 @@ class RemoteConfig(BaseModel):
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
     downloadUrl: HttpUrl
+    vkLinkSupport: Optional[HttpUrl] = None
+    maxLinkSupport: Optional[HttpUrl] = None
+    telegramLinkSupport: Optional[HttpUrl] = None
 
 
 class Teacher(BaseModel):

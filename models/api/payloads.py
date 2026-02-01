@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -14,6 +14,9 @@ class RemoteConfigUpdate(BaseModel):
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
     downloadUrl: HttpUrl
+    vkLinkSupport: Optional[HttpUrl] = None
+    maxLinkSupport: Optional[HttpUrl] = None
+    telegramLinkSupport: Optional[HttpUrl] = None
 
 
 class Teacher(BaseModel):
