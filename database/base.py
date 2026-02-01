@@ -18,8 +18,10 @@ async def db_init():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def manage_groups(group_name: str):
+async def manage_groups(group_name: str) -> int:
     """
+    Возвращает id группы и создает группу в базе данных, если она не существует
+
     Изначально названия групп были uppercase, но для красивого интерфейса приложения теперь названия сохраняются
      в оригинальном виде, внедряется это посреди года, так что приходится писать проверки лишние
     """
