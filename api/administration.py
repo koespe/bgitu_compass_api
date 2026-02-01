@@ -130,7 +130,7 @@ async def post_teachers_info(
     return Response()
 
 
-@administration_router.get("/groupsInfo", response_model=responses.GroupsInfo)
+@administration_router.get("/groupsInfo", response_model=List[responses.GroupsInfo])
 async def get_groups_info(
     session: AsyncSession = Depends(get_session_fastapi),
 ):

@@ -84,7 +84,7 @@ async def insert_schedule(group_id, schedule, is_forced=True):
         query = await session.execute(select(Groups).where(Groups.id == group_id))
         group = query.scalar()
         group.rawSchedule = schedule
-        group.scheduleUpdateDate = datetime.now(ZoneInfo("Europe/Moscow"))
+        group.scheduleUpdateDate = datetime.now(timezone.utc).timestamp()
 
         group.scheduleVersion += 1
         if is_forced:
