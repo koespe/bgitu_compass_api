@@ -67,7 +67,7 @@ async def update_availability():
     return data
 
 
-@updates_router.post("/createChangelog")
+@updates_router.post("/createChangelog", deprecated=True)
 def use_body(
     version: int,
     changelog: bytes = Body(media_type="application/octet-stream"),
@@ -78,7 +78,7 @@ def use_body(
     return Response()
 
 
-@updates_router.get("/changelog")
+@updates_router.get("/changelog", deprecated=True)
 async def get_changelog(version: int):
     path = paths_config.changelogs / f"{version}.md"
     if path.exists():
