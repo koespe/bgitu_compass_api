@@ -93,6 +93,18 @@ async def get_changelog(version: int):
 
 @updates_router.get("/remoteConfig", responses={200: {"model": responses.RemoteConfig}})
 async def get_remote_config():
+    """
+    - `swapWeeks` - DEPRECATED. Пока что используется в боте
+    - `termStartDate` - опорная дата для расчета четности недели (очередность first_week/second_week).
+    Нужна, чтобы вручную сдвигать цикл недель, если учебный отдел меняет график посреди семестра
+        ```
+        week_num = ((current_date - term_start_date).days // 7) + 1
+        return "second_week" if week_num % 2 == 0 else "first_week"
+        ```
+    - `lastResetTimestamp` - метка времени последнего сброса данных групп (truncate table groups)
+    - `versionCode` - номер актуальной версии приложения (для проверки обновлений)
+    - `downloadUrl` - ссылка на скачивание актуального APK-файла
+    """
     config_path = Path(paths_config.remote_config)
     if not config_path.exists():
         raise HTTPException(status_code=404, detail="Для начала создайте файл remote_config.json через POST запрос")

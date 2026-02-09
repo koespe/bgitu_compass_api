@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
@@ -10,6 +11,7 @@ class UploadUpdate(BaseModel):
 
 
 class RemoteConfigUpdate(BaseModel):
+    termStartDate: datetime.date
     swapWeeks: bool
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
