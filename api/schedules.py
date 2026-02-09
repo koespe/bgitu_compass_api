@@ -1,8 +1,8 @@
-from cachetools.func import ttl_cache
-import json
 import calendar
+import json
 from typing import Optional, List
 
+from cachetools.func import ttl_cache
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
@@ -44,14 +44,14 @@ async def get_groups(
     return JSONResponse(groups_list)
 
 
-@schedules_router.get("/v2/lessons")
+@schedules_router.get("/v2/lessons", deprecated=True)
 async def get_lessons(
     groupId: int,
     cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
     session: AsyncSession = Depends(get_session_fastapi),
 ):
     """
-    Расписание на 2 недели в json "first/second week"-формате
+    Расписание на 2 недели в json "first/second week"-формате (с использованием логики swapWeeks)
     """
     query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
     json_schedule = query.scalar()  # dict
@@ -79,6 +79,44 @@ async def get_lessons(
             json_schedule["second_week"],
             json_schedule["first_week"],
         )
+
+    response = JSONResponse(content=jsonable_encoder(json_schedule))
+    if cache:
+        response.headers["Cache-Control"] = "max-age=600, public"
+    return response
+
+
+@schedules_router.get("/v3/lessons")
+async def get_lessons(
+    groupId: int,
+    cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
+    session: AsyncSession = Depends(get_session_fastapi),
+):
+    """
+    Расписание на 2 недели в json "first/second week"-формате так, как они записаны в файлах на сайте bgitu.ru
+
+    Для точности данных используйте termStartDate из GET /remoteConfig (смотрите Swagger)
+    """
+    query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
+    json_schedule = query.scalar()  # dict
+
+    if json_schedule is None:
+        # В приложении появится выбор группы(новый учебный год => индексы сменились)
+        raise HTTPException(status_code=409, detail=f"Группа с id={groupId} не найдена")
+
+    # Цифровые индексы превращаем в строки типа MONDAY, TUESDAY, ...
+    for week in json_schedule:
+        new_schedule = {}
+        for day, lessons in json_schedule[week].items():
+            day_number = int(day)
+            day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
+            for lesson in lessons:
+                lesson["subjectId"] = 1  # Для совместимости со старыми версиями приложения
+
+                teacher_short = lesson.get("teacher")
+                lesson["teacherFullName"] = get_teacher_full_name(teacher_short) if teacher_short else None
+            new_schedule[day_name] = lessons
+        json_schedule[week] = new_schedule
 
     response = JSONResponse(content=jsonable_encoder(json_schedule))
     if cache:
