@@ -53,6 +53,9 @@ class RemoteConfig(BaseModel):
     vkLinkSupport: Optional[HttpUrl] = None
     maxLinkSupport: Optional[HttpUrl] = None
     telegramLinkSupport: Optional[HttpUrl] = None
+    teacherSearchWarningDateRanges: Optional[List[List[str]]] = Field(
+        None, example=[["12-08", "02-07"], ["05-11", "07-15"]]
+    )
 
 
 class Teacher(BaseModel):
