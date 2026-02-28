@@ -1,8 +1,3 @@
-"""
-Скрипт запускается отдельно, из директории этого файла, скрипт в scripts/supervisord.conf
-"""
-
-import asyncio
 import datetime
 import hashlib
 import json
@@ -12,7 +7,6 @@ import urllib.parse
 
 import aiohttp
 from aiohttp import BasicAuth
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bs4 import BeautifulSoup
 
 from config import paths_config
@@ -45,12 +39,10 @@ async def fetch_url(session, url):
                 else:
                     return await response.text()  # Если это сайт
             else:
-                print(
-                    f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка при получении {url}: {response.status}"
-                )
+                print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка {url}: {response.status}")
                 return None
     except Exception as e:
-        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка при получении {url}: {e}")
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка {url}: {e}")
         return None
 
 
@@ -97,7 +89,7 @@ def parse_links_mag(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
     links = []
 
-    # Ищем сразу все теги <a>, независимо от того, где они лежат (в таблице или div)
+    # Ищем сразу все теги <а>, независимо от того, где они лежат (в таблице или div)
     for a_tag in soup.find_all("a", href=True):
         href = a_tag["href"]
         # Проверяем расширение (lower() на случай .XLS)
@@ -141,7 +133,7 @@ async def notify_empty_page(url, notification_messages):
         last_empty_notification[url] = current_time
 
 
-async def check_for_updates():
+async def check_site_files_updates():
     async with aiohttp.ClientSession() as session:
         notification_messages = []
         all_links = await get_all_links(session, notification_messages)
@@ -195,19 +187,3 @@ async def check_for_updates():
 
         if notification_messages:
             await send_telegram_message("\n".join(notification_messages))
-
-
-async def main():
-    scheduler = AsyncIOScheduler()
-    await check_for_updates()
-    scheduler.add_job(check_for_updates, "interval", minutes=5)
-    scheduler.start()
-
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main())
-        loop.run_forever()
-    except:
-        loop.close()

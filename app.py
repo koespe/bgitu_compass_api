@@ -1,4 +1,7 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,16 +11,32 @@ from api.schedules import schedules_router
 from api.teachers import teachers_router
 from api.updates import updates_router
 from database.base import db_init
+from modules.annual_data_reset import annual_data_reset
+from modules.site_updates import check_site_files_updates
+from modules.term_start_date_scraper import check_site_variable_updates
+
+scheduler = AsyncIOScheduler()
 
 
-async def lifespan():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     await db_init()
+
+    scheduler.add_job(check_site_files_updates, "interval", minutes=5)
+    scheduler.add_job(check_site_variable_updates, "interval", minutes=60)
+    scheduler.add_job(annual_data_reset, "cron", month=7, day=15, hour=0, minute=0, second=0)
+
+    scheduler.start()
+
+    yield
+
+    scheduler.shutdown()
 
 
 app = FastAPI(
     title="BGITU Compass API",
     version="using Validator`s data",
-    on_startup=[lifespan],
+    lifespan=lifespan,
     docs_url="/documentation",
     redoc_url=None,
     debug=False,
