@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME=bgitu-api
-DIR=/home/BotsCouch/bgitu_api
+DIR=/home/user1/bgitu_api
 USER=root
 WORKERS=3
 WORKER_CLASS=uvicorn.workers.UvicornWorker
