@@ -1,5 +1,4 @@
 import json
-import os
 import urllib.parse
 from pathlib import Path
 from typing import List, Optional
@@ -87,9 +86,7 @@ async def update_validator_links(
 
     `upload_all` = `True` — отправка всех файлов в валидатор с удалением хэшей
     """
-    if upload_all:
-        os.remove(paths_config.schedule_hashes)
-    await check_site_files_updates()
+    await check_site_files_updates(upload_all)
     return Response()
 
 

@@ -1,6 +1,8 @@
+import asyncio
 import datetime
 import hashlib
 import json
+import os
 import re
 import urllib.parse
 
@@ -16,6 +18,8 @@ TELEGRAM_NOTIFICATION_URL_TEMPLATE = (
     f"chat_id={settings.administration_chat_id}&"
     f"text="
 )
+
+_is_site_updates_checker_running = False
 
 
 def parse_links_bak_spo(html_content):
@@ -120,57 +124,76 @@ async def send_telegram_message(message):
         await session.get(telegram_url)
 
 
-async def check_site_files_updates():
-    async with aiohttp.ClientSession() as session:
-        all_links = await get_all_links(session)
+async def check_site_files_updates(upload_all: bool = False):
+    """
+    Вместо async lock используем простой глобальный флаг -
+    предотвращает дубли, когда таймер и API вызывают функцию одновременно
+    """
+    global _is_site_updates_checker_running
 
-        # Сайт считается недоступным, если не найдено ссылок
-        if not all_links:
-            return
+    if _is_site_updates_checker_running:
+        while _is_site_updates_checker_running:
+            await asyncio.sleep(1)
 
-        try:
-            with open(paths_config.schedule_hashes, "r", encoding="utf-8") as f:
-                previous_hashes = json.load(f)
-        except FileNotFoundError:
+    _is_site_updates_checker_running = True
+    try:
+        async with aiohttp.ClientSession() as session:
+            all_links = await get_all_links(session)
+
+            # Сайт считается недоступным, если не найдено ссылок
+            if not all_links:
+                return
+
+            # При upload_all=True удаляем файл с хэшами, чтобы все файлы считались новыми
+            hashes_file = paths_config.schedule_hashes
             previous_hashes = {}
+            if upload_all:
+                if os.path.exists(hashes_file):
+                    os.remove(hashes_file)
+            else:
+                if os.path.exists(hashes_file):
+                    with open(hashes_file, "r", encoding="utf-8") as f:
+                        previous_hashes = json.load(f)
 
-        current_hashes = previous_hashes.copy()
-        files_to_process = []
+            current_hashes = previous_hashes.copy()
+            files_to_process = []
 
-        for link in all_links:
-            file_hash = await get_file_hash(session, link)
-            if file_hash:
-                current_hashes[link] = file_hash
-                if file_hash != previous_hashes.get(link):
-                    files_to_process.append(link)
+            for link in all_links:
+                file_hash = await get_file_hash(session, link)
+                if file_hash:
+                    current_hashes[link] = file_hash
+                    if file_hash != previous_hashes.get(link):
+                        files_to_process.append(link)
 
-        # Формируем данные для валидатора и уведомления
-        data_for_validator = []
-        notification_messages = []
-        for link in files_to_process:
-            if match := re.match(r".*/(.*?)(\s*\.\w+)$", link):
-                filename = minimize_filenames(urllib.parse.unquote(match.group(1)).strip())
-                safe_link = urllib.parse.quote(link, safe="/:")
+            # Формируем данные для валидатора и уведомления
+            data_for_validator = []
+            notification_messages = []
+            for link in files_to_process:
+                if match := re.match(r".*/(.*?)(\s*\.\w+)$", link):
+                    filename = minimize_filenames(urllib.parse.unquote(match.group(1)).strip())
+                    safe_link = urllib.parse.quote(link, safe="/:")
 
-                data_for_validator.append({"name": filename, "url": safe_link})
-                notification_messages.append(filename)
+                    data_for_validator.append({"name": filename, "url": safe_link})
+                    notification_messages.append(filename)
 
-        # Отправляем запросы в валидатор
-        if data_for_validator:
-            async with session.post(
-                url=settings.validator_url + "schedule/upload",
-                auth=BasicAuth(login="uploader", password=settings.admin_password),
-                json=data_for_validator,
-            ) as request:
-                request_status = request.status
+            # Отправляем запросы в валидатор
+            if data_for_validator:
+                async with session.post(
+                    url=settings.validator_url + "schedule/upload",
+                    auth=BasicAuth(login="uploader", password=settings.admin_password),
+                    json=data_for_validator,
+                ) as request:
+                    request_status = request.status
+                    if request_status == 200:
+                        notification_messages.insert(0, f"Подтвердите новое расписание -> {settings.validator_url}\n")
+                    else:
+                        notification_messages = [f"Ошибка при отправке файлов на валидацию: status={request_status}"]
+
                 if request_status == 200:
-                    notification_messages.insert(0, f"Подтвердите новое расписание -> {settings.validator_url}\n")
-                else:
-                    notification_messages = [f"Ошибка при отправке файлов на валидацию: status={request_status}"]
+                    with open(paths_config.schedule_hashes, "w", encoding="utf-8") as f:
+                        json.dump(current_hashes, f, indent=4, ensure_ascii=False)
 
-            if request_status == 200:
-                with open(paths_config.schedule_hashes, "w", encoding="utf-8") as f:
-                    json.dump(current_hashes, f, indent=4, ensure_ascii=False)
-
-        if notification_messages:
-            await send_telegram_message("\n".join(notification_messages))
+            if notification_messages:
+                await send_telegram_message("\n".join(notification_messages))
+    finally:
+        _is_site_updates_checker_running = False

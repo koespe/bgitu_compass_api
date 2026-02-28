@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -22,15 +23,15 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     await db_init()
 
-    scheduler.add_job(check_site_files_updates, "interval", minutes=5)
-    scheduler.add_job(check_site_variable_updates, "interval", minutes=60)
+    scheduler.add_job(check_site_files_updates, "interval", minutes=5, next_run_time=datetime.now())
+    scheduler.add_job(check_site_variable_updates, "interval", minutes=60, next_run_time=datetime.now())
     scheduler.add_job(annual_data_reset, "cron", month=7, day=15, hour=0, minute=0, second=0)
 
     scheduler.start()
 
     yield
 
-    scheduler.shutdown()
+    scheduler.shutdown(wait=True)
 
 
 app = FastAPI(
