@@ -1,8 +1,8 @@
 <div style="display: flex; align-items: center; gap: 20px;">
   <img src="https://bgitu-compass.ru/assets/compass_logo_big_old.png" width="100" alt="BGITU Compass Logo">
   <div>
-    <h1>БГИТУ Компас (Backend API)</h1>
-    <p>Backend для мобильного приложения и бота <a href="https://bgitu-compass.ru">«БГИТУ Компас»</a>. Предоставляет доступ к расписанию занятий, информации о преподавателях ФГБОУ ВО «БГИТУ».</p>
+    <h1><a href="https://bgitu-compass.ru">БГИТУ Компас</a> (Backend API)</h1>
+    <p>Backend для мобильного приложения и бота. Предоставляет доступ к расписанию занятий, информации о преподавателях ФГБОУ ВО "Брянский государственный инженерно-технологический университет".</p>
     <p>🤖 <a href="https://t.me/bgitu_compass_bot">Telegram-бот</a> | 🌐 <a href="https://bgitu-compass.ru">Приложение для Android</a></p>
   </div>
 </div>
