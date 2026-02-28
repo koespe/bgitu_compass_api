@@ -20,7 +20,6 @@ class Settings(BaseSettings):
 
     # Настройки для монитора обновлений сайта и уведомлений о новых файлах
     telegram_bot_token: str
-    admin_tg_id: int
     administration_chat_id: int
     validator_url: str
 
