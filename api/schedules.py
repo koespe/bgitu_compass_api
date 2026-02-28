@@ -17,7 +17,13 @@ from models.database.models import Groups
 schedules_router = APIRouter(tags=["Schedules"])
 
 
-@schedules_router.get("/groups", responses={200: {"model": List[responses.Groups]}})
+@schedules_router.get(
+    "/groups",
+    responses={
+        200: {"model": List[responses.Groups]},
+        404: {"description": "Группа не найдена"},
+    },
+)
 async def get_groups(
     group_id: Optional[int] = Query(None, alias="groupId", description="Если зачем-то нужно получить название группы"),
     search_query: Optional[str] = Query(None, alias="searchQuery", description="Поисковой запрос, регистр не важен"),
@@ -27,7 +33,7 @@ async def get_groups(
     Без аргументов — все группы
     """
     if search_query is not None:
-        search_results = await search_group(search_query)
+        search_results = await search_group(search_query.replace("-", ""))
         return JSONResponse(search_results)
 
     query = select(Groups.id, Groups.name)  # Все группы
@@ -51,6 +57,7 @@ async def get_lessons(
     session: AsyncSession = Depends(get_session_fastapi),
 ):
     """
+    Будет отключено 1 сентября 2026
     Расписание на 2 недели в json "first/second week"-формате (с использованием логики swapWeeks)
     """
     query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
@@ -86,7 +93,13 @@ async def get_lessons(
     return response
 
 
-@schedules_router.get("/v3/lessons")
+@schedules_router.get(
+    "/v3/lessons",
+    responses={
+        200: {"model": responses.WeekSchedule, "description": "Расписание на 2 недели"},
+        409: {"description": "Группа либо пропала, либо начался новый учебный год и индексы групп сменились"},
+    },
+)
 async def get_lessons(
     groupId: int,
     cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
@@ -95,7 +108,7 @@ async def get_lessons(
     """
     Расписание на 2 недели в json "first/second week"-формате так, как они записаны в файлах на сайте bgitu.ru
 
-    Для точности данных используйте termStartDate из GET /remoteConfig (смотрите Swagger)
+    Для правильности вычисления четности недели используйте termStartDate из GET /remoteConfig
     """
     query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
     json_schedule = query.scalar()  # dict
@@ -111,8 +124,6 @@ async def get_lessons(
             day_number = int(day)
             day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
             for lesson in lessons:
-                lesson["subjectId"] = 1  # Для совместимости со старыми версиями приложения
-
                 teacher_short = lesson.get("teacher")
                 lesson["teacherFullName"] = get_teacher_full_name(teacher_short) if teacher_short else None
             new_schedule[day_name] = lessons

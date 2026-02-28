@@ -1,3 +1,4 @@
+import calendar
 import json
 import re
 from datetime import datetime, date, timedelta
@@ -5,20 +6,18 @@ from pathlib import Path
 from typing import Optional
 
 import jmespath
+from cachetools import TTLCache, cached
 from fastapi import APIRouter, HTTPException, Query
 from fastapi import Depends
 from fastapi.security import HTTPBearer
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import paths_config
+from database.base import get_session_fastapi
 from models.api import responses
 from models.api.responses import Teacher
 from models.database.models import Groups
-from database.base import get_session_fastapi
-from config import paths_config, settings
-
-import calendar
 
 teachers_router = APIRouter(tags=["Teachers"])
 security = HTTPBearer()
@@ -26,13 +25,18 @@ security = HTTPBearer()
 
 @teachers_router.get("/teacherSchedule")
 async def teacher_schedule(
-    teacher_search: Optional[bool] = Query(False, alias="teacherSearch", description="Формат`/v2/teacherSearch`"),
     search_query: Optional[str] = Query(None, alias="searchQuery", description="Поисковой запрос, регистр не важен"),
-    teacher: Optional[str] = Query(None, description="Точное совпадение"),
-    session: AsyncSession = Depends(get_session_fastapi)
+    teacher: Optional[str] = Query(
+        None, description="Точное совпадение, формат выдачи — first/second week, как в v2 и v3 /lessons"
+    ),
+    teacher_search: Optional[bool] = Query(
+        True, alias="teacherSearch", description="Формат выдачи на 3 недели (как было в`/v2/teacherSearch`)"
+    ),
+    session: AsyncSession = Depends(get_session_fastapi),
 ):
     """
-    Аналог `/v2/lessons`, но здесь получение расписания для преподавателя
+    При параметре `teacher_search = False`
+    используйте termStartDate из GET /remoteConfig для правильности вычисления четности недели
     """
     if search_query:
         teachers_info = Path(paths_config.teachers_info)
@@ -50,9 +54,9 @@ async def teacher_schedule(
         filtered_teachers = []
 
         for teacher in all_teachers:
-            full_name = teacher['name'].lower()
+            full_name = teacher["name"].lower()
             if search_query in full_name:
-                filtered_teachers.append(teacher['name'])
+                filtered_teachers.append(teacher["name"])
 
         return filtered_teachers
     elif teacher:
@@ -293,10 +297,16 @@ async def find_teacher(
         raise HTTPException(detail="Не указано действие или ключ", status_code=400)
 
 
-@teachers_router.get("/teachersInfo", response_model=list[Teacher])
+@teachers_router.get(
+    "/teachersInfo",
+    response_model=list[Teacher],
+    responses={
+        404: {"description": "Файл с преподавателями не найден. Необходимо обновить данные через валидатор"},
+    },
+)
 async def get_teachers_info():
     """
-    Полные ФИО преподавателей и их кафедры. Это все данные из Google Sheets, может быть обновлено через валидатор.
+    Полные ФИО преподавателей и их кафедры. Данные из таблицы в валидаторе
     """
     teachers_info = Path(paths_config.teachers_info)
     if not teachers_info.exists():
@@ -311,10 +321,7 @@ async def get_teachers_info():
 
 
 def is_valid_russian(text: str) -> bool:
-    """
-    Защита от инъекций
-    """
-    return bool(re.match(r"^[\w\s.]+$", text))
+    return bool(re.match(r"^[а-яА-ЯёЁ\s]+$", text))
 
 
 def replace_none_with_empty(obj):
@@ -413,13 +420,18 @@ def merge_cross_group_classes_weekly(schedule: dict) -> dict:
     return merged_schedule
 
 
+@cached(TTLCache(maxsize=1, ttl=900))
+def _get_term_start_date() -> date:
+    try:
+        with open(paths_config.remote_config, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        return datetime.strptime(config["termStartDate"], "%Y-%m-%d").date()
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        start_year = date.today().year - 1 if date.today().month < 9 else date.today().year
+        return date(start_year, 9, 1)
+
+
 def get_week_type(current_date: date) -> str:
-    start_year = current_date.year - 1 if current_date.month < 9 else current_date.year
-    start_date = date(start_year, 9, 1)
-
-    if start_date.isoweekday() == 7:
-        start_date += timedelta(days=1)
-
-    week_num = ((current_date - start_date).days // 7) + 1
-    is_second = (week_num % 2 == 0) != settings.swap_weeks
-    return "second_week" if is_second else "first_week"
+    term_start_date = _get_term_start_date()
+    week_num = ((current_date - term_start_date).days // 7) + 1
+    return "second_week" if week_num % 2 == 0 else "first_week"

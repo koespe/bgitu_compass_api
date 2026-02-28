@@ -1,5 +1,4 @@
 import uvicorn
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,7 +7,6 @@ from api.general import general_router
 from api.schedules import schedules_router
 from api.teachers import teachers_router
 from api.updates import updates_router
-
 from database.base import db_init
 
 

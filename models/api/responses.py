@@ -59,5 +59,30 @@ class RemoteConfig(BaseModel):
 
 
 class Teacher(BaseModel):
-    name: str
-    departments: list[str]
+    name: str = Field(..., example="Казаков Олег Дмитриевич")
+    departments: str = Field(..., example="Кафедра информационных технологий")
+
+
+class Lesson(BaseModel):
+    subjectName: str
+    building: str
+    startAt: str = Field(..., example="10:35:00")
+    endAt: str = Field(..., example="12:10:00")
+    classroom: str
+    teacher: Optional[str] = None
+    isLecture: bool
+    teacherFullName: Optional[str] = None
+
+
+class DaySchedule(BaseModel):
+    MONDAY: Optional[List[Lesson]] = None
+    TUESDAY: Optional[List[Lesson]] = None
+    WEDNESDAY: Optional[List[Lesson]] = None
+    THURSDAY: Optional[List[Lesson]] = None
+    FRIDAY: Optional[List[Lesson]] = None
+    SATURDAY: Optional[List[Lesson]] = None
+
+
+class WeekSchedule(BaseModel):
+    first_week: DaySchedule
+    second_week: DaySchedule

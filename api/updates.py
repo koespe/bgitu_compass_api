@@ -91,7 +91,13 @@ async def get_changelog(version: int):
         raise HTTPException(status_code=404, detail=f"Changelog отсутствует для версии {version}")
 
 
-@updates_router.get("/remoteConfig", responses={200: {"model": responses.RemoteConfig}})
+@updates_router.get(
+    "/remoteConfig",
+    responses={
+        200: {"model": responses.RemoteConfig},
+        404: {"description": "Файл remote_config.json не найден. Необходимо создать через POST запрос"},
+    },
+)
 async def get_remote_config():
     """
     - `swapWeeks` - DEPRECATED. Пока что используется в боте
@@ -102,8 +108,8 @@ async def get_remote_config():
         return "second_week" if week_num % 2 == 0 else "first_week"
         ```
     - `lastResetTimestamp` - метка времени последнего сброса данных групп (truncate table groups)
-    - `teacherSearchWarningDateRanges` - список диапазонов дат в формате [["MM-DD", "MM-DD"], ...] для предупреждений о возможных ошибках
-     при поиске преподавателей ввиду сессии
+    - `teacherSearchWarningDateRanges` - список диапазонов дат в формате [["MM-DD", "MM-DD"], ...] для предупреждений
+    о возможных ошибках при поиске преподавателей ввиду сессии
     - `versionCode` - номер актуальной версии приложения (для проверки обновлений)
     - `downloadUrl` - ссылка на скачивание актуального APK-файла
     """

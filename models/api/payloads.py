@@ -63,8 +63,8 @@ class RemoteConfigUpdate(BaseModel):
 
 
 class Teacher(BaseModel):
-    name: str
-    departments: str
+    name: str = Field(..., example="Казаков Олег Дмитриевич")
+    departments: str = Field(..., example="Кафедра информационных технологий")
 
 
 class TeachersInfo(BaseModel):

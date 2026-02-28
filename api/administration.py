@@ -44,13 +44,18 @@ async def send_notify_telegram_message(message):
             pass
 
 
-@administration_router.post("/uploadNewSchedules")
+@administration_router.post(
+    "/uploadNewSchedules",
+    responses={
+        400: {"description": "Принимаются только .xlsx файлы"},
+    },
+)
 async def upload_new_schedules(
     files: List[UploadFile] = File(...),  # Multiple file uploads
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    Вызывается автоматически валидатором, но можно добавить файлы вручную.
+    Вызывается автоматически валидатором, но можно добавить файлы вручную
 
     Принимаются только .xlsx файлы
     """
@@ -75,9 +80,11 @@ async def update_validator_links(
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    `upload_all` = `False` -> убиваем процесс, в итоге fetch с сайта
+    Используется в валидаторе
 
-    `upload_all` = `True` -> удаляем файл и убиваем процесс —> отправляем все файлы в валидатор
+    `upload_all` = `False` — прнудительная проверка файлов на сайте
+
+    `upload_all` = `True` — отправка всех файлов в валидатор с удалением
     """
     if upload_all:
         os.remove("data/schedule_hashes.json")
@@ -117,7 +124,7 @@ async def post_teachers_info(
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
     """
-    При изменениях в валидаторе во вкладке "Преподаватели" сюда приходят обновленные данные из Google Sheets
+    При изменениях в валидаторе во вкладке "Преподаватели" сюда приходят обновленные данные по скрипту в Google Sheets
     """
     transformed_data = [
         {"name": teacher.name, "departments": [dept.strip() for dept in teacher.departments.split("+")]}
@@ -136,6 +143,8 @@ async def get_groups_info(
 ):
     """
     Используется в валидаторе для администрирования групп
+
+    Можно использовать для получения времени обновления группы
     """
     result = await session.execute(select(Groups.id, Groups.name, Groups.scheduleUpdateDate))
     groups_data = result.all()
@@ -147,7 +156,12 @@ async def get_groups_info(
     return groups_info
 
 
-@administration_router.delete("/deleteGroup/{group_id}")
+@administration_router.delete(
+    "/deleteGroup/{group_id}",
+    responses={
+        404: {"description": "Группа с указанным id не найдена"},
+    },
+)
 async def delete_group(
     group_id: int,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
