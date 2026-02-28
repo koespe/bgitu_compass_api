@@ -19,7 +19,9 @@ from modules.excel_parser import process_schedule_file
 from modules.site_updates import check_site_files_updates
 
 TELEGRAM_BOT_URL = (
-    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?chat_id={settings.admin_tg_id}&text="
+    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?"
+    f"chat_id={settings.administration_chat_id}&"
+    f"text="
 )
 
 administration_router = APIRouter(tags=["Administration"])
