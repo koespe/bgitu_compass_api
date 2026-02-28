@@ -1,23 +1,19 @@
 """
-Скрипт запускается отдельно, из директории этого файла, скрипт в файле supervisord.conf
+Скрипт запускается отдельно, из директории этого файла, скрипт в scripts/supervisord.conf
 """
 
-import re
-import urllib.parse
-import aiohttp
 import asyncio
+import datetime
 import hashlib
 import json
-
-from aiohttp import BasicAuth
-from bs4 import BeautifulSoup
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import sys
-import os
+import re
 import time
+import urllib.parse
 
-# Жуткий костыль, но иначе на linux + supervisord не работает
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import aiohttp
+from aiohttp import BasicAuth
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from bs4 import BeautifulSoup
 
 from config import paths_config
 from config import settings
@@ -49,10 +45,12 @@ async def fetch_url(session, url):
                 else:
                     return await response.text()  # Если это сайт
             else:
-                print(f"Ошибка при получении {url}: {response.status}")
+                print(
+                    f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка при получении {url}: {response.status}"
+                )
                 return None
     except Exception as e:
-        print(f"Ошибка при получении {url}: {e}")
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Ошибка при получении {url}: {e}")
         return None
 
 
