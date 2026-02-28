@@ -1,9 +1,9 @@
-<table>
-  <tr>
-    <td>
+<table style="border: none; border-collapse: collapse;">
+  <tr style="border: none;">
+    <td style="border: none; padding: 0;">
       <img src="https://bgitu-compass.ru/assets/compass_logo_big_old.png" width="100" alt="BGITU Compass Logo">
     </td>
-    <td>
+    <td style="border: none; padding: 0 10px;">
       <h1>БГИТУ Компас (Backend API)</h1>
       <p>Backend для мобильного приложения и бота «БГИТУ Компас». Предоставляет доступ к расписанию занятий, информации о преподавателях ФГБОУ ВО «БГИТУ»</p>
     </td>
