@@ -1,7 +1,5 @@
-import asyncio
 import json
 import os
-import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import List, Optional
@@ -18,6 +16,7 @@ from database.base import get_session_fastapi
 from models.api import payloads, responses
 from models.database.models import Groups
 from modules.excel_parser import process_schedule_file
+from modules.site_updates import check_site_files_updates
 
 TELEGRAM_BOT_URL = (
     f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?chat_id={settings.admin_tg_id}&text="
@@ -82,39 +81,13 @@ async def update_validator_links(
     """
     Используется в валидаторе
 
-    `upload_all` = `False` — прнудительная проверка файлов на сайте
+    `upload_all` = `False` — принудительная проверка файлов на сайте
 
-    `upload_all` = `True` — отправка всех файлов в валидатор с удалением
+    `upload_all` = `True` — отправка всех файлов в валидатор с удалением хэшей
     """
     if upload_all:
-        os.remove("data/schedule_hashes.json")
-
-    try:
-        pids = subprocess.check_output("pgrep -f site_updates.py", shell=True).decode().strip().split("\n")
-        if pids and pids != [""]:
-            killed_any = False
-            for pid_str in pids:
-                try:
-                    pid = int(pid_str)
-                    os.kill(pid, 15)  # SIGTERM
-                    killed_any = True
-                except OSError:
-                    # Если не удалось отправить SIGTERM, убиваем силой
-                    try:
-                        pid = int(pid_str)
-                        os.kill(pid, 9)
-                        killed_any = True
-                    except Exception:
-                        pass
-            if not killed_any:
-                raise HTTPException(400, detail="Процесс site_updates.py не найден")
-        else:
-            raise HTTPException(400, detail="Процесс site_updates.py не найден")
-
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(400, detail=f"Ошибка при поиске процесса: {e}")
-
-    await asyncio.sleep(20)  # Для лучшего понимания задержки на сайте валидатора
+        os.remove(paths_config.schedule_hashes)
+    await check_site_files_updates()
     return Response()
 
 

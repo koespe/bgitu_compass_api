@@ -2,7 +2,6 @@ import datetime
 import hashlib
 import json
 import re
-import time
 import urllib.parse
 
 import aiohttp
@@ -12,18 +11,66 @@ from bs4 import BeautifulSoup
 from config import paths_config
 from config import settings
 
-TELEGRAM_BOT_URL = (
-    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?chat_id={settings.admin_tg_id}&text="
+TELEGRAM_NOTIFICATION_URL_TEMPLATE = (
+    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?"
+    f"chat_id={settings.administration_chat_id}&"
+    f"text="
 )
 
-# In-memory флаг для уведомлений о пустых списках
-last_empty_notification = {}
+
+def parse_links_bak_spo(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
+    links = []
+
+    for button in soup.find_all("button"):
+        onclick = button.get("onclick")
+        if onclick and "window.location.href" in onclick:
+            # Используем регулярку для точного поиска ссылки внутри кавычек (одинарных или двойных)
+            # Это надежнее, чем rfind, если пробелы или кавычки изменятся
+            match = re.search(r"window\.location\.href\s*=\s*['\"]([^'\"]+)['\"]", onclick)
+            if match:
+                link = match.group(1)
+                full_link = urllib.parse.urljoin("https://bgitu.ru", link)
+                links.append(full_link)
+
+    return links
 
 
-async def send_telegram_message(message):
-    async with aiohttp.ClientSession() as session:
-        telegram_url = TELEGRAM_BOT_URL + urllib.parse.quote(message)
-        await session.get(telegram_url)
+def parse_links_mag(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
+    links = []
+
+    # Ищем сразу все теги <а>, независимо от того, где они лежат (в таблице или div)
+    for a_tag in soup.find_all("a", href=True):
+        href = a_tag["href"]
+        # Проверяем расширение (lower() на случай .XLS)
+        if href.lower().endswith((".xls", ".xlsx")):
+            full_link = urllib.parse.urljoin("https://bgitu.ru", href)
+            links.append(full_link)
+
+    return links
+
+
+async def get_all_links(session):
+    targets = [
+        ("https://bgitu.ru/studentu/raspisanie/ochnoe-obuchenie/", parse_links_bak_spo),
+        ("https://bgitu.ru/studentu/raspisanie/spo/spo-raspisanie.php", parse_links_bak_spo),
+        ("https://bgitu.ru/studentu/raspisanie/magistratura/", parse_links_mag),
+    ]
+
+    all_links = []
+    for url, parser in targets:
+        content = await fetch_url(session, url)
+        if not content:
+            continue
+
+        links = parser(content)
+        if not links:
+            continue
+
+        all_links.extend(links)
+
+    return all_links
 
 
 async def fetch_url(session, url):
@@ -67,76 +114,15 @@ def minimize_filenames(filename: str):
     return filename
 
 
-def parse_links_bak_spo(html_content):
-    soup = BeautifulSoup(html_content, "html.parser")
-    links = []
-
-    for button in soup.find_all("button"):
-        onclick = button.get("onclick")
-        if onclick and "window.location.href" in onclick:
-            # Используем регулярку для точного поиска ссылки внутри кавычек (одинарных или двойных)
-            # Это надежнее, чем rfind, если пробелы или кавычки изменятся
-            match = re.search(r"window\.location\.href\s*=\s*['\"]([^'\"]+)['\"]", onclick)
-            if match:
-                link = match.group(1)
-                full_link = urllib.parse.urljoin("https://bgitu.ru", link)
-                links.append(full_link)
-
-    return links
-
-
-def parse_links_mag(html_content):
-    soup = BeautifulSoup(html_content, "html.parser")
-    links = []
-
-    # Ищем сразу все теги <а>, независимо от того, где они лежат (в таблице или div)
-    for a_tag in soup.find_all("a", href=True):
-        href = a_tag["href"]
-        # Проверяем расширение (lower() на случай .XLS)
-        if href.lower().endswith((".xls", ".xlsx")):
-            full_link = urllib.parse.urljoin("https://bgitu.ru", href)
-            links.append(full_link)
-
-    return links
-
-
-async def get_all_links(session, notification_messages):
-    targets = [
-        ("https://bgitu.ru/studentu/raspisanie/ochnoe-obuchenie/", parse_links_bak_spo),
-        ("https://bgitu.ru/studentu/raspisanie/spo/spo-raspisanie.php", parse_links_bak_spo),
-        ("https://bgitu.ru/studentu/raspisanie/magistratura/", parse_links_mag),
-    ]
-
-    all_links = []
-    for url, parser in targets:
-        content = await fetch_url(session, url)
-        if not content:
-            continue
-
-        links = parser(content)
-        if not links:
-            await notify_empty_page(url, notification_messages)
-
-        all_links.extend(links)
-
-    return all_links
-
-
-async def notify_empty_page(url, notification_messages):
-    """
-    Добавляет уведомление о пустой странице в список сообщений с cooldown.
-    """
-    current_time = time.time()
-    last_notified = last_empty_notification.get(url, 0)
-    if current_time - last_notified > 3600:  # Cooldown 1 час
-        notification_messages.append(f"На странице {url} не найдено расписаний")
-        last_empty_notification[url] = current_time
+async def send_telegram_message(message):
+    async with aiohttp.ClientSession() as session:
+        telegram_url = TELEGRAM_NOTIFICATION_URL_TEMPLATE + urllib.parse.quote(message)
+        await session.get(telegram_url)
 
 
 async def check_site_files_updates():
     async with aiohttp.ClientSession() as session:
-        notification_messages = []
-        all_links = await get_all_links(session, notification_messages)
+        all_links = await get_all_links(session)
 
         # Сайт считается недоступным, если не найдено ссылок
         if not all_links:
@@ -148,7 +134,7 @@ async def check_site_files_updates():
         except FileNotFoundError:
             previous_hashes = {}
 
-        current_hashes = previous_hashes.copy()  # Сохраняем старые хэши
+        current_hashes = previous_hashes.copy()
         files_to_process = []
 
         for link in all_links:
@@ -160,6 +146,7 @@ async def check_site_files_updates():
 
         # Формируем данные для валидатора и уведомления
         data_for_validator = []
+        notification_messages = []
         for link in files_to_process:
             if match := re.match(r".*/(.*?)(\s*\.\w+)$", link):
                 filename = minimize_filenames(urllib.parse.unquote(match.group(1)).strip())
