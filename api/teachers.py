@@ -321,7 +321,7 @@ async def get_teachers_info():
 
 
 def is_valid_russian(text: str) -> bool:
-    return bool(re.match(r"^[а-яА-ЯёЁ\s]+$", text))
+    return bool(re.match(r"^[а-яА-ЯёЁ\s.]+$", text))
 
 
 def replace_none_with_empty(obj):
