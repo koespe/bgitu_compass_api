@@ -30,7 +30,7 @@ async def teacher_schedule(
         None, description="Точное совпадение, формат выдачи — first/second week, как в v2 и v3 /lessons"
     ),
     teacher_search: Optional[bool] = Query(
-        True, alias="teacherSearch", description="Формат выдачи на 3 недели (как было в`/v2/teacherSearch`)"
+        False, alias="teacherSearch", description="Формат выдачи на 3 недели (как было в`/v2/teacherSearch`)"
     ),
     session: AsyncSession = Depends(get_session_fastapi),
 ):
