@@ -1,6 +1,6 @@
 import datetime
 from datetime import date, time
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -86,3 +86,22 @@ class DaySchedule(BaseModel):
 class WeekSchedule(BaseModel):
     first_week: DaySchedule
     second_week: DaySchedule
+
+
+class SuspiciousSubject(BaseModel):
+    subject: str
+    groups: List[str]
+
+
+class SuspiciousSubjectsResponse(BaseModel):
+    approximateAccuracy: int
+    subjects: List[SuspiciousSubject]
+
+
+class GroupRiskItem(BaseModel):
+    risk: Literal["high", "medium"]
+    groupName: str
+    reason: str
+
+
+GroupRiskResponse = List[GroupRiskItem]
