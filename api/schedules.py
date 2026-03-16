@@ -36,7 +36,7 @@ async def get_groups(
         search_results = await search_group(search_query.replace("-", ""))
         return JSONResponse(search_results)
 
-    query = select(Groups.id, Groups.name)  # Все группы
+    query = select(Groups.id, Groups.name, Groups.scheduleUpdateDate)  # Все группы
 
     if group_id:
         query = query.where(Groups.id == group_id)

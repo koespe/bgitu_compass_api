@@ -31,6 +31,7 @@ class TeacherLocations(BaseModel):
 class Groups(BaseModel):
     id: int
     name: str
+    scheduleUpdateDate: int
 
 
 class GroupsInfo(BaseModel):

@@ -7,12 +7,12 @@ import aiohttp
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.responses import Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, paths_config
 from database.base import get_session_fastapi
-from models.api import payloads, responses
+from models.api import payloads
 from models.database.models import Groups
 from modules.excel_parser import process_schedule_file
 from modules.site_updates import check_site_files_updates
@@ -107,25 +107,6 @@ async def post_teachers_info(
         json.dump(transformed_data, f, ensure_ascii=False, indent=4)
 
     return Response()
-
-
-@administration_router.get("/groupsInfo", response_model=List[responses.GroupsInfo])
-async def get_groups_info(
-    session: AsyncSession = Depends(get_session_fastapi),
-):
-    """
-    Используется в валидаторе для администрирования групп
-
-    Используется в боте для получения времени обновления группы
-    """
-    result = await session.execute(select(Groups.id, Groups.name, Groups.scheduleUpdateDate))
-    groups_data = result.all()
-
-    groups_info = []
-    for group in groups_data:
-        groups_info.append({"id": group.id, "name": group.name, "scheduleUpdateDate": group.scheduleUpdateDate})
-
-    return groups_info
 
 
 @administration_router.delete(
