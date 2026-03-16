@@ -7,6 +7,9 @@ from config import paths_config, settings
 
 
 async def annual_data_reset():
+    """
+    Файл `schedule_hashes.json` не удаляем, потому что на сайте может долго еще висеть расписание
+    """
     async with settings.engine.begin() as conn:
         await conn.execute(text("TRUNCATE TABLE groups"))
 
