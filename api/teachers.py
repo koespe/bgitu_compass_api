@@ -25,7 +25,7 @@ security = HTTPBearer()
 
 @teachers_router.get("/teacherSchedule")
 async def teacher_schedule(
-    search_query: Optional[str] = Query(None, alias="searchQuery", description="Поисковой запрос, регистр не важен"),
+    search_query: Optional[str] = Query("", alias="searchQuery", description="Поисковой запрос, регистр не важен"),
     teacher: Optional[str] = Query(
         None, description="Точное совпадение, формат выдачи — first/second week, как в v2 и v3 /lessons"
     ),
@@ -38,28 +38,7 @@ async def teacher_schedule(
     При параметре `teacher_search = False`
     используйте termStartDate из GET /remoteConfig для правильности вычисления четности недели
     """
-    if search_query:
-        teachers_info = Path(paths_config.teachers_info)
-        if not teachers_info.exists():
-            raise HTTPException(
-                status_code=404,
-                detail='Обновите любую ячейку в валидаторе во вкладке "Преподаватели" для создания файла '
-                "или выполните собственный POST запрос",
-            )
-
-        with open(teachers_info, "r", encoding="utf-8") as f:
-            all_teachers = json.load(f)
-
-        search_query = search_query.strip().lower()
-        filtered_teachers = []
-
-        for teacher in all_teachers:
-            full_name = teacher["name"].lower()
-            if search_query in full_name:
-                filtered_teachers.append(teacher["name"])
-
-        return filtered_teachers
-    elif teacher:
+    if teacher:
         if not is_valid_russian(teacher):
             raise HTTPException(detail="Нет результатов", status_code=404)
 
@@ -159,7 +138,26 @@ async def teacher_schedule(
             response_data = sorted(response_data, key=lambda x: (x["lessonDate"], x["startAt"]))
             return merge_cross_group_classes(response_data)
     else:
-        raise HTTPException(detail="Не указано действие или ключ", status_code=400)
+        teachers_info_file = Path(paths_config.teachers_info)
+        if not teachers_info_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail='Обновите любую ячейку в валидаторе во вкладке "Преподаватели" для создания файла '
+                "или выполните собственный POST запрос",
+            )
+
+        with open(teachers_info_file, "r", encoding="utf-8") as f:
+            all_teachers = json.load(f)
+
+        search_query = search_query.strip().lower()
+        filtered_teachers = []
+
+        for teacher in all_teachers:
+            full_name = teacher["name"].lower()
+            if search_query in full_name:
+                filtered_teachers.append(teacher["name"])
+
+        return filtered_teachers
 
 
 @teachers_router.get(
