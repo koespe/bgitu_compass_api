@@ -63,7 +63,11 @@ def parse_group_name(sheet, group_column, groups_row):
 
     if group_name.upper().strip() in ("А", "Б"):  # Подгруппы
         subgroup = group_name
-        group_name = parse_cell(sheet, row=groups_row - 1, col=group_column).strip() + f"({subgroup})"
+        base_group_name_cell = parse_cell(sheet, row=groups_row - 1, col=group_column)
+        if base_group_name_cell:
+            group_name = base_group_name_cell.strip() + f"({subgroup})"
+        else:
+            return None
 
     group_name = group_name.strip().replace("/", "-").replace(" ", "").replace("спо", "СПО")
 
@@ -201,6 +205,8 @@ def parse_day(sheet, row, col):
 
 
 def parse_cell(sheet: Worksheet, row, col, using_merged=True, return_value=True) -> Union[str, MergedCell, Cell, None]:
+    if row < 1 or col < 1:
+        return None
     cell = sheet.cell(row=row, column=col)
     if using_merged:
         if isinstance(cell, MergedCell):
