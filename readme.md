@@ -19,7 +19,7 @@
 - **PostgreSQL + asyncpg** — база данных
 - **openpyxl** — парсинг Excel
 
-## Установка
+## Установка (локально)
 
 1. Клонировать репозиторий
 
@@ -30,13 +30,61 @@
 
 3. Создать `.env` файл на основе `.env.example`
 
-## Запуск
+## Запуск (локально)
 
 ```bash
 python app.py
 ```
 
 Документация API доступна по адресу: http://localhost:8000/documentation
+
+## Docker
+
+### Требования
+
+- Docker
+- Docker Compose
+
+### Запуск
+
+1. Создать `.env` на основе `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+   В `POSTGRES_CONNECTION_STRING` заменить `localhost` на `postgres` (имя сервиса в compose):
+   ```
+   POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@postgres:5432/compass-api
+   ```
+
+2. Запустить:
+   ```bash
+   docker compose up -d
+   ```
+
+Посмотреть логи:
+
+   ```bash
+   docker compose logs -f
+   ```
+
+Остановить:
+
+   ```bash
+   docker compose down
+   ```
+
+### DNS
+
+Оба домена должны резолвиться на IP сервера:
+
+- `bgitu-compass.ru` → статика + редиректы (nginx)
+- `api-ssl.bgitu-compass.ru` → API (FastAPI через nginx proxy)
+
+### Важно
+
+- SSL не встроен
+- База данных сохраняется в named volume `pgdata`, не теряется при `down`
+- Данные (APK, JSON-конфиги) — в `./data`, проброшены в оба контейнера (nginx и fastapi)
 
 ## Структура проекта
 
@@ -47,7 +95,10 @@ bgitu_api/
 ├── models/        # Pydantic и SQLAlchemy модели
 ├── modules/       # Парсеры Excel и сайта
 ├── data/          # JSON-конфиги и файлы обновленй
-├── scripts/       # Скрипты для деплоя
+├── public/        # Статика SPA
+├── nginx/         # Конфиг nginx для Docker
+├── Dockerfile     # Сборка контейнера FastAPI
+├── docker-compose.yml
 ├── config.py      # Конфигурация
 └── app.py         # Точка входа
 ```

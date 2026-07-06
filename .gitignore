@@ -4,3 +4,5 @@
 /_backups
 /.env
 /updates/schedule_hashes.json
+pgdata/
+

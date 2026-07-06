@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     validator_url: str
 
     admin_password: str
+    postgres_password: str
     postgres_connection_string: str
 
     @property
