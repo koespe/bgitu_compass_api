@@ -5,7 +5,6 @@
 /.env
 /updates/schedule_hashes.json
 pgdata/
-
 /data/teachers_info.json
 /data/schedule_hashes.json
 /data/remote_config.json
