@@ -13,8 +13,12 @@ async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False
 
 
 async def db_init():
+    from sqlalchemy.exc import ProgrammingError
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except ProgrammingError:
+            pass
 
 
 async def manage_groups(group_name: str) -> int:
