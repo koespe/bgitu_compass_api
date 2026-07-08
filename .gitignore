@@ -9,3 +9,6 @@ pgdata/
 /data/schedule_hashes.json
 /data/remote_config.json
 /AGENTS.md
+/modules/validator/google/credentials.json
+/modules/validator/application.yaml
+/modules/validator/tokens/StoredCredential
