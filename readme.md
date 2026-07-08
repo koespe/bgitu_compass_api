@@ -96,7 +96,7 @@ bgitu_api/
 ├── modules/       # Парсеры Excel и сайта
 ├── data/          # JSON-конфиги и файлы обновленй
 ├── public/        # Статика SPA
-├── nginx/         # Конфиг nginx для Docker
+├── nginx.conf     # Конфиг nginx для Docker
 ├── Dockerfile     # Сборка контейнера FastAPI
 ├── docker-compose.yml
 ├── config.py      # Конфигурация
