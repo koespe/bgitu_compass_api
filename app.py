@@ -14,7 +14,6 @@ from api.teachers import teachers_router
 from api.updates import updates_router
 from database.base import db_init
 from modules.annual_data_reset import annual_data_reset
-from modules.site_updates import check_site_files_updates, check_missing_groups
 from modules.term_start_date_scraper import check_site_variable_updates
 
 scheduler = AsyncIOScheduler()
@@ -24,10 +23,7 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     await db_init()
 
-    scheduler.add_job(check_site_files_updates, "interval", minutes=5, next_run_time=datetime.now())
     scheduler.add_job(check_site_variable_updates, "interval", minutes=60, next_run_time=datetime.now())
-    scheduler.add_job(check_missing_groups, "cron", day_of_week="mon", hour=0, minute=0, next_run_time=datetime.now())
-
     scheduler.add_job(annual_data_reset, "cron", month=7, day=15, hour=0, minute=0, second=0)
 
     scheduler.start()

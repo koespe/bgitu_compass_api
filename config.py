@@ -18,11 +18,6 @@ class Settings(BaseSettings):
     user_data_version: int  # Индикатор для приложения о смене учебного года (для обратной совместимости версий)
     swap_weeks: bool  # first и second week могут поменять местами
 
-    # Настройки для монитора обновлений сайта и уведомлений о новых файлах
-    telegram_bot_token: str
-    administration_chat_id: int
-    validator_url: str
-
     admin_password: str
     postgres_password: str
     postgres_connection_string: str

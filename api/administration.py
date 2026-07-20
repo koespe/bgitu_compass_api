@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import delete
@@ -13,13 +13,6 @@ from database.base import get_session_fastapi
 from models.api import payloads
 from models.database.models import Groups
 from modules.excel_parser import process_schedule_file
-from modules.site_updates import check_site_files_updates
-
-TELEGRAM_BOT_URL = (
-    f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage?"
-    f"chat_id={settings.administration_chat_id}&"
-    f"text="
-)
 
 administration_router = APIRouter(tags=["Administration"])
 security = HTTPBearer()
@@ -59,22 +52,6 @@ async def upload_new_schedules(
         filenames.append(file.filename)
         await process_schedule_file(file.file)
 
-    return Response()
-
-
-@administration_router.get("/updateValidatorLinks")
-async def update_validator_links(
-    upload_all: Optional[bool] = Query(False, alias="uploadAll"),
-    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
-):
-    """
-    Используется в валидаторе
-
-    `upload_all` = `False` — принудительная проверка файлов на сайте
-
-    `upload_all` = `True` — отправка всех файлов в валидатор с удалением хэшей
-    """
-    await check_site_files_updates(upload_all)
     return Response()
 
 
