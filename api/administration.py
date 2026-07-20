@@ -1,9 +1,7 @@
 import json
-import urllib.parse
 from pathlib import Path
 from typing import List, Optional
 
-import aiohttp
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.responses import Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -35,15 +33,6 @@ def authenticate_admin(credentials: HTTPAuthorizationCredentials = Depends(secur
     return True
 
 
-async def send_notify_telegram_message(message):
-    async with aiohttp.ClientSession() as session:
-        telegram_url = TELEGRAM_BOT_URL + urllib.parse.quote(message)
-        try:
-            await session.get(telegram_url)
-        except Exception:
-            pass
-
-
 @administration_router.post(
     "/uploadNewSchedules",
     responses={
@@ -70,7 +59,6 @@ async def upload_new_schedules(
         filenames.append(file.filename)
         await process_schedule_file(file.file)
 
-    await send_notify_telegram_message(message="Обновлены файлы:\n" + "\n".join(filenames))
     return Response()
 
 
