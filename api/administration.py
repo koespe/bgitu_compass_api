@@ -84,9 +84,7 @@ async def remove_groups(
     Авто-удаление групп по названию в валидаторе при появлении/исчезновении подгрупп, регистр неважен
     """
     normalized_names = [name.upper() for name in group_names]
-    result = await session.execute(
-        delete(Groups).where(func.upper(Groups.name).in_(normalized_names))
-    )
+    result = await session.execute(delete(Groups).where(func.upper(Groups.name).in_(normalized_names)))
 
     await session.commit()
     return {"deleted_count": result.rowcount}
