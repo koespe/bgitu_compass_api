@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, paths_config
@@ -74,19 +74,19 @@ async def post_teachers_info(
     return Response()
 
 
-@administration_router.delete(
-    "/deleteGroup/{group_id}",
-    responses={
-        404: {"description": "Группа с указанным id не найдена"},
-    },
-)
-async def delete_group(
-    group_id: int,
+@administration_router.post("/removeGroups")
+async def remove_groups(
+    group_names: list[str],
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
     session: AsyncSession = Depends(get_session_fastapi),
 ):
-    result = await session.execute(delete(Groups).where(Groups.id == group_id))
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail=f"Группа с id={group_id} не найдена")
+    """
+    Авто-удаление групп по названию в валидаторе при появлении/исчезновении подгрупп, регистр неважен
+    """
+    normalized_names = [name.upper() for name in group_names]
+    result = await session.execute(
+        delete(Groups).where(func.upper(Groups.name).in_(normalized_names))
+    )
+
     await session.commit()
-    return Response
+    return {"deleted_count": result.rowcount}
