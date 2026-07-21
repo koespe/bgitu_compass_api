@@ -163,10 +163,7 @@ async def get_schedule_update_date():
     return {"userDataVersion": 12345, "scheduleUploadDate": "2067-06-07 12:34:56"}
 
 
-@schedules_router.get(
-    "/scheduleVersion",
-    deprecated=True
-)
+@schedules_router.get("/scheduleVersion", deprecated=True)
 async def get_schedule_version(groupId: int):
     """
     Оставлено в целях обратной совместимости со старыми версиями приложения
