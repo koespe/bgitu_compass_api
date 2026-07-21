@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Body
+from fastapi.responses import Response, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,3 +88,16 @@ async def remove_groups(
 
     await session.commit()
     return {"deleted_count": result.rowcount}
+
+
+@administration_router.post("/update")
+async def upload_new_version(
+    update_file: bytes = Body(media_type="application/octet-stream"),
+    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
+):
+    """
+    Загрузить новую версию приложения
+    """
+    with open(paths_config.apk_file, "w+b") as file_in_dir:
+        file_in_dir.write(update_file)
+    return JSONResponse({"detail": "Файл успешно обновлен"})

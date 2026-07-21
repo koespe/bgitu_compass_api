@@ -4,7 +4,7 @@ from pathlib import Path
 
 import aiohttp
 from aiohttp.web_exceptions import HTTPError
-from fastapi import APIRouter, HTTPException, Body, Response
+from fastapi import APIRouter, HTTPException, Response
 from fastapi import Depends
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -17,17 +17,47 @@ updates_router = APIRouter(tags=["App updates"])
 security = HTTPBearer()
 
 
-@updates_router.post("/update")
-async def upload_new_version(
-    update_file: bytes = Body(media_type="application/octet-stream"),
+@updates_router.get(
+    "/remoteConfig",
+    responses={
+        200: {"model": responses.RemoteConfig},
+        404: {"description": "Файл remote_config.json не найден. Необходимо создать через POST запрос"},
+    },
+)
+async def get_remote_config():
+    """
+    - `termStartDate` - опорная дата для расчета четности недели (очередность first_week/second_week).
+    Нужна, чтобы вручную сдвигать цикл недель, если учебный отдел меняет график посреди семестра
+        ```python
+        week_num = ((current_date - term_start_date).days // 7) + 1
+        return "second_week" if week_num % 2 == 0 else "first_week"
+        ```
+    - `lastResetTimestamp` - метка времени последнего сброса данных групп (truncate table groups)
+    - `teacherSearchWarningDateRanges` - список диапазонов дат в формате [["MM-DD", "MM-DD"], ...] для предупреждений
+    о возможных ошибках при поиске преподавателей ввиду сессии
+    - `versionCode` - номер актуальной версии приложения (для проверки обновлений)
+    - `downloadUrl` - ссылка на скачивание актуального APK-файла
+    """
+    config_path = Path(paths_config.remote_config)
+    if not config_path.exists():
+        raise HTTPException(status_code=404, detail="Для начала создайте файл remote_config.json через POST запрос")
+
+    with open(config_path, "r") as f:
+        return json.load(f)
+
+
+@updates_router.post("/remoteConfig")
+async def update_remote_config(
+    payload: payloads.RemoteConfigUpdate,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
-    """
-    Загрузить новую версию приложения
-    """
-    with open(paths_config.apk_file, "w+b") as file_in_dir:
-        file_in_dir.write(update_file)
-    return JSONResponse({"detail": "Файл успешно обновлен"})
+    config_path = Path(paths_config.remote_config)
+    config_data = payload.model_dump(mode="json")
+
+    with open(config_path, "w") as f:
+        json.dump(config_data, f, indent=2)
+
+    return JSONResponse({"detail": "Success"})
 
 
 @updates_router.post("/updateRemoteConfig", deprecated=True)
@@ -90,46 +120,3 @@ async def get_changelog(version: int):
         )
     else:
         raise HTTPException(status_code=404, detail=f"Changelog отсутствует для версии {version}")
-
-
-@updates_router.get(
-    "/remoteConfig",
-    responses={
-        200: {"model": responses.RemoteConfig},
-        404: {"description": "Файл remote_config.json не найден. Необходимо создать через POST запрос"},
-    },
-)
-async def get_remote_config():
-    """
-    - `termStartDate` - опорная дата для расчета четности недели (очередность first_week/second_week).
-    Нужна, чтобы вручную сдвигать цикл недель, если учебный отдел меняет график посреди семестра
-        ```python
-        week_num = ((current_date - term_start_date).days // 7) + 1
-        return "second_week" if week_num % 2 == 0 else "first_week"
-        ```
-    - `lastResetTimestamp` - метка времени последнего сброса данных групп (truncate table groups)
-    - `teacherSearchWarningDateRanges` - список диапазонов дат в формате [["MM-DD", "MM-DD"], ...] для предупреждений
-    о возможных ошибках при поиске преподавателей ввиду сессии
-    - `versionCode` - номер актуальной версии приложения (для проверки обновлений)
-    - `downloadUrl` - ссылка на скачивание актуального APK-файла
-    """
-    config_path = Path(paths_config.remote_config)
-    if not config_path.exists():
-        raise HTTPException(status_code=404, detail="Для начала создайте файл remote_config.json через POST запрос")
-
-    with open(config_path, "r") as f:
-        return json.load(f)
-
-
-@updates_router.post("/remoteConfig")
-async def update_remote_config(
-    payload: payloads.RemoteConfigUpdate,
-    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
-):
-    config_path = Path(paths_config.remote_config)
-    config_data = payload.model_dump(mode="json")
-
-    with open(config_path, "w") as f:
-        json.dump(config_data, f, indent=2)
-
-    return JSONResponse({"detail": "Success"})
