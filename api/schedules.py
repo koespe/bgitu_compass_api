@@ -51,36 +51,6 @@ async def get_groups(
     return JSONResponse(groups_list)
 
 
-@schedules_router.get("/v2/lessons", deprecated=True)
-async def get_lessons(
-    groupId: int,
-    cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
-):
-    """
-    Отключено 1 сентября 2026, сейчас при любой группе отображается заглушка, необходимо использовать /v3/lessons
-    """
-    days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
-
-    def lesson():
-        return Lesson(
-            subjectName="Необходимо обновить приложение",
-            building="ДОТ",
-            startAt="10:35:00",
-            endAt="12:10:00",
-            classroom="2005",
-            teacher="Директор Интернета",
-            isLecture=True,
-            teacherFullName="Директор Интернета",
-        )
-
-    week = DaySchedule(**{day: [lesson()] for day in days})
-
-    return {
-        "first_week": week,
-        "second_week": week,
-    }
-
-
 @schedules_router.get(
     "/v3/lessons",
     responses={
@@ -151,6 +121,36 @@ def get_teachers_mapping():
 
 def get_teacher_full_name(short_name: str) -> Optional[str]:
     return get_teachers_mapping().get(short_name)
+
+
+@schedules_router.get("/v2/lessons", deprecated=True)
+async def get_lessons(
+    groupId: int,
+    cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
+):
+    """
+    Отключено 1 сентября 2026, сейчас при любой группе отображается заглушка, необходимо использовать /v3/lessons
+    """
+    days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
+
+    def lesson():
+        return Lesson(
+            subjectName="Необходимо обновить приложение",
+            building="ДОТ",
+            startAt="10:35:00",
+            endAt="12:10:00",
+            classroom="2005",
+            teacher="Директор Интернета",
+            isLecture=True,
+            teacherFullName="Директор Интернета",
+        )
+
+    week = DaySchedule(**{day: [lesson()] for day in days})
+
+    return {
+        "first_week": week,
+        "second_week": week,
+    }
 
 
 @schedules_router.get("/scheduleUpdateDate", deprecated=True)
