@@ -5,13 +5,14 @@ from typing import Optional, List
 from cachetools.func import ttl_cache
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import settings, paths_config
+from config import paths_config
 from database.base import get_session_fastapi, search_group
 from models.api import responses
+from models.api.responses import Lesson, DaySchedule
 from models.database.models import Groups
 
 schedules_router = APIRouter(tags=["Schedules"])
@@ -54,43 +55,30 @@ async def get_groups(
 async def get_lessons(
     groupId: int,
     cache: Optional[bool] = Query(False, description="Enable caching — header max-age=600"),
-    session: AsyncSession = Depends(get_session_fastapi),
 ):
     """
-    Будет отключено 1 сентября 2026
-    Расписание на 2 недели в json "first/second week"-формате (с использованием логики swapWeeks)
+    Отключено 1 сентября 2026, сейчас при любой группе отображается заглушка, необходимо использовать /v3/lessons
     """
-    query = await session.execute(select(Groups.rawSchedule).where(Groups.id == groupId))
-    json_schedule = query.scalar()  # dict
+    days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
 
-    if json_schedule is None:
-        # В приложении появится выбор группы(новый учебный год => индексы сменились)
-        raise HTTPException(status_code=409, detail=f"Группа с id={groupId} не найдена")
-
-    # Цифровые индексы превращаем в строки типа MONDAY, TUESDAY, ...
-    for week in json_schedule:
-        new_schedule = {}
-        for day, lessons in json_schedule[week].items():
-            day_number = int(day)
-            day_name = calendar.day_name[day_number - 1].upper()  # day_number - 1 для соответствия с индексами
-            for lesson in lessons:
-                lesson["subjectId"] = 1  # Для совместимости со старыми версиями приложения
-
-                teacher_short = lesson.get("teacher")
-                lesson["teacherFullName"] = get_teacher_full_name(teacher_short) if teacher_short else None
-            new_schedule[day_name] = lessons
-        json_schedule[week] = new_schedule
-
-    if settings.swap_weeks:
-        json_schedule["first_week"], json_schedule["second_week"] = (
-            json_schedule["second_week"],
-            json_schedule["first_week"],
+    def lesson():
+        return Lesson(
+            subjectName="Необходимо обновить приложение",
+            building="ДОТ",
+            startAt="10:35:00",
+            endAt="12:10:00",
+            classroom="2005",
+            teacher="Директор Интернета",
+            isLecture=True,
+            teacherFullName="Директор Интернета",
         )
 
-    response = JSONResponse(content=jsonable_encoder(json_schedule))
-    if cache:
-        response.headers["Cache-Control"] = "max-age=600, public"
-    return response
+    week = DaySchedule(**{day: [lesson()] for day in days})
+
+    return {
+        "first_week": week,
+        "second_week": week,
+    }
 
 
 @schedules_router.get(
@@ -135,22 +123,6 @@ async def get_lessons(
     return response
 
 
-@schedules_router.get(
-    "/scheduleVersion",
-    deprecated=True,
-    responses={200: {"model": responses.ScheduleVersion}},
-)
-async def get_schedule_version(groupId: int, session: AsyncSession = Depends(get_session_fastapi)):
-    try:
-        query = await session.execute(
-            select(Groups.scheduleVersion, Groups.forceUpdateVersion).where(Groups.id == groupId)
-        )
-        schedule_version = [dict(r._mapping) for r in query]
-        return schedule_version[0]
-    except IndexError:
-        return Response(status_code=400)
-
-
 @ttl_cache(maxsize=1, ttl=3600)
 def get_teachers_mapping():
     if not paths_config.teachers_info.exists():
@@ -188,4 +160,15 @@ async def get_schedule_update_date():
 
     scheduleUploadDate не играет роли, но это поле требует приложение (Field 'scheduleUploadDate' is required)
     """
-    return {"userDataVersion": 12345, "scheduleUploadDate": "2025-04-03 02:01:00"}
+    return {"userDataVersion": 12345, "scheduleUploadDate": "2067-06-07 12:34:56"}
+
+
+@schedules_router.get(
+    "/scheduleVersion",
+    deprecated=True
+)
+async def get_schedule_version(groupId: int):
+    """
+    Оставлено в целях обратной совместимости со старыми версиями приложения
+    """
+    return {"scheduleVersion": 12345, "forceUpdateVersion": 12345}

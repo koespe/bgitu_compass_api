@@ -14,6 +14,4 @@ class Groups(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     rawSchedule = Column(MutableJson)
-    scheduleVersion = Column(Integer, default=0)
-    forceUpdateVersion = Column(Integer, default=0)
     scheduleUpdateDate = Column(Integer, default=lambda: datetime.now(timezone.utc).timestamp())
