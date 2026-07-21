@@ -42,7 +42,6 @@ async def download_apk():
 
 
 @general_router.get("/docs", response_class=HTMLResponse, include_in_schema=False)
-@general_router.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def plug():
     return (
         "<p>Если ты разработчик, потенциальный контрибьютор или просто "
