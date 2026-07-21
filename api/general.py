@@ -29,7 +29,7 @@ async def contact_redirect(person: str, service: str):
 
 @general_router.get("/contacts/{person}/avatar.png", include_in_schema=False)
 async def avatar(person: str):
-    return FileResponse(f"public/{person}.png", media_type="image/png")
+    return FileResponse(f"public/avatars/{person}.png", media_type="image/png")
 
 
 @general_router.get("/download")

@@ -1,0 +1,6 @@
+User-agent: *
+
+Disallow: /userAgreement
+Disallow: /download
+
+Allow: /
