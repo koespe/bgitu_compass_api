@@ -4,7 +4,6 @@ from pathlib import Path
 
 import aiohttp
 from aiohttp.web_exceptions import HTTPError
-from dotenv import set_key
 from fastapi import APIRouter, HTTPException, Body, Response
 from fastapi import Depends
 from fastapi.responses import JSONResponse, FileResponse
@@ -12,7 +11,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from api.administration import authenticate_admin
 from config import paths_config
-from config import settings
 from models.api import payloads, responses
 
 updates_router = APIRouter(tags=["App updates"])
@@ -103,7 +101,6 @@ async def get_changelog(version: int):
 )
 async def get_remote_config():
     """
-    - `swapWeeks` - DEPRECATED. Пока что используется в боте
     - `termStartDate` - опорная дата для расчета четности недели (очередность first_week/second_week).
     Нужна, чтобы вручную сдвигать цикл недель, если учебный отдел меняет график посреди семестра
         ```python
@@ -131,10 +128,6 @@ async def update_remote_config(
 ):
     config_path = Path(paths_config.remote_config)
     config_data = payload.model_dump(mode="json")
-
-    # Обновляем swapWeeks в .env файле для быстрого доступа к этой переменной
-    set_key(".env", "SWAP_WEEKS", str(payload.swapWeeks))
-    settings.swap_weeks = payload.swapWeeks
 
     with open(config_path, "w") as f:
         json.dump(config_data, f, indent=2)
