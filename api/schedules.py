@@ -184,7 +184,7 @@ def get_teacher_full_name(short_name: str) -> Optional[str]:
 @schedules_router.get("/scheduleUpdateDate", deprecated=True)
 async def get_schedule_update_date():
     """
-    Это индикатор для приложения о смене учебного года и необходимости заново выбрать группу (для старых версий)
+    Индикатор для старых версий приложения о смене учебного года и необходимости заново выбрать группу
 
     scheduleUploadDate не играет роли, но это поле требует приложение (Field 'scheduleUploadDate' is required)
     """
