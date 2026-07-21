@@ -73,18 +73,10 @@ python app.py
    docker compose down
    ```
 
-### DNS
-
-Оба домена должны резолвиться на IP сервера:
-
-- `bgitu-compass.ru` → статика + редиректы (nginx)
-- `api-ssl.bgitu-compass.ru` → API (FastAPI через nginx proxy)
-
 ### Важно
 
-- SSL не встроен
+- SSL не встроен, а приложение будет требовать HTTPS
 - База данных сохраняется в named volume `pgdata`, не теряется при `down`
-- Данные (APK, JSON-конфиги) — в `./data`, проброшены в оба контейнера (nginx и fastapi)
 
 ## Структура проекта
 
@@ -96,7 +88,6 @@ bgitu_api/
 ├── modules/       # Парсеры Excel и сайта
 ├── data/          # JSON-конфиги и файлы обновленй
 ├── public/        # Статика SPA
-├── nginx.conf     # Конфиг nginx для Docker
 ├── Dockerfile     # Сборка контейнера FastAPI
 ├── docker-compose.yml
 ├── config.py      # Конфигурация
