@@ -83,16 +83,12 @@ async def search_group(user_query):
     return formatted_list
 
 
-async def insert_schedule(group_id, schedule, is_forced=True):
+async def insert_schedule(group_id, schedule):
     async with get_session() as session:
         query = await session.execute(select(Groups).where(Groups.id == group_id))
         group = query.scalar()
         group.rawSchedule = schedule
         group.scheduleUpdateDate = datetime.now(timezone.utc).timestamp()
-
-        group.scheduleVersion += 1
-        if is_forced:
-            group.forceUpdateVersion = group.scheduleVersion
 
         session.add(group)
         await session.commit()
