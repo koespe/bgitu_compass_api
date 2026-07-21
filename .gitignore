@@ -3,10 +3,8 @@
 /tests/
 /_backups
 /.env
-/updates/schedule_hashes.json
 pgdata/
 /data/teachers_info.json
-/data/schedule_hashes.json
 /data/remote_config.json
 /AGENTS.md
 /modules/validator/google/credentials.json
