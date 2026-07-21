@@ -24,6 +24,9 @@ async def upload_new_version(
     update_file: bytes = Body(media_type="application/octet-stream"),
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    Загрузить новую версию приложения
+    """
     with open(paths_config.apk_file, "w+b") as file_in_dir:
         file_in_dir.write(update_file)
     return JSONResponse({"detail": "Файл успешно обновлен"})
@@ -34,6 +37,11 @@ async def upload_new_version(
     payload: payloads.UploadUpdate,
     auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
 ):
+    """
+    Оставлено для обратной совместимости
+
+    Обновляет файл update_remote_config.json — НЕ ПУТАТЬ С remote_config.json
+    """
     async with aiohttp.ClientSession() as session:
         async with session.get(payload.downloadUrl) as response:
             try:
@@ -62,24 +70,19 @@ async def upload_new_version(
 
 @updates_router.get("/updateAvailability", deprecated=True, responses={200: {"model": responses.UpdateAvailability}})
 async def update_availability():
+    """
+    Старый роут для обратной совместимости
+    """
     with open(paths_config.updates_remote_config, "r") as f:
         data = json.load(f)
     return data
 
 
-@updates_router.post("/createChangelog", deprecated=True)
-def use_body(
-    version: int,
-    changelog: bytes = Body(media_type="application/octet-stream"),
-    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
-):
-    with open(paths_config.changelogs / f"{version}.md", "wb") as changelog_file:
-        changelog_file.write(changelog)
-    return Response()
-
-
 @updates_router.get("/changelog", deprecated=True)
 async def get_changelog(version: int):
+    """
+    Старый роут для обратной совместимости
+    """
     path = paths_config.changelogs / f"{version}.md"
     if path.exists():
         return FileResponse(
