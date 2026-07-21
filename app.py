@@ -5,6 +5,7 @@ import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.administration import administration_router
 from api.general import general_router
@@ -48,6 +49,8 @@ app.include_router(teachers_router)
 app.include_router(administration_router)
 app.include_router(updates_router)
 
+app.mount("/ios-instructions", StaticFiles(directory="public/ios-instructions"), name="ios-instructions")
+app.mount("/userAgreement", StaticFiles(directory="public/userAgreement"), name="userAgreement")
 
 app.add_middleware(
     CORSMiddleware,
