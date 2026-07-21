@@ -188,4 +188,4 @@ async def get_schedule_update_date():
 
     scheduleUploadDate не играет роли, но это поле требует приложение (Field 'scheduleUploadDate' is required)
     """
-    return {"userDataVersion": settings.user_data_version, "scheduleUploadDate": "2025-04-03 02:01:00"}
+    return {"userDataVersion": 12345, "scheduleUploadDate": "2025-04-03 02:01:00"}
