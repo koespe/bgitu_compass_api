@@ -51,15 +51,20 @@ python app.py
    ```bash
    cp .env.example .env
    ```
-   В `POSTGRES_CONNECTION_STRING` заменить `localhost` на `postgres` (имя сервиса в compose):
-   ```
-   POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@postgres:5432/compass-api
-   ```
 
 2. Запустить:
    ```bash
    docker compose up -d
    ```
+
+Docker-compose автоматически переопределяет `POSTGRES_CONNECTION_STRING` для подключения к postgres внутри docker-сети —
+менять `localhost` на `postgres` в `.env` не нужно.
+
+Порт API задаётся переменной `API_EX_PORT` в `.env` (по умолчанию 8000). Для nginx:
+
+```
+API_EX_PORT=8000
+```
 
 Посмотреть логи:
 
@@ -75,7 +80,7 @@ python app.py
 
 ### Важно
 
-- SSL не встроен, а приложение будет требовать HTTPS
+- SSL не встроен, но мобильное приложение будет требовать HTTPS
 - База данных сохраняется в named volume `pgdata`, не теряется при `down`
 
 ## Структура проекта
@@ -90,6 +95,7 @@ bgitu_api/
 ├── public/        # Статика SPA
 ├── Dockerfile     # Сборка контейнера FastAPI
 ├── docker-compose.yml
+├── .dockerignore  # Исключения из Docker-образа
 ├── config.py      # Конфигурация
 └── app.py         # Точка входа
 ```
