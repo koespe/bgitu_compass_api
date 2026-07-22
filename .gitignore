@@ -1,12 +1,7 @@
 /.idea/
 /venv/
-/tests/
 /_backups
 /.env
-pgdata/
 /data/teachers_info.json
 /data/remote_config.json
 /AGENTS.md
-/modules/validator/google/credentials.json
-/modules/validator/application.yaml
-/modules/validator/tokens/StoredCredential
