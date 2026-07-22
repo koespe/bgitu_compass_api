@@ -2,6 +2,10 @@ services:
   fastapi:
     build: .
     env_file: .env
+    environment:
+      - POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@postgres:5432/compass-api
+    ports:
+      - "${API_EX_PORT}:8000"
     volumes:
       - ./data:/app/data
     depends_on:
