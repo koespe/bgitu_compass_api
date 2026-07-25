@@ -45,57 +45,96 @@ python app.py
 - Docker
 - Docker Compose
 
-### Запуск
+### Сервисы
+
+| Сервис         | Описание                    | Порт                   |
+|----------------|-----------------------------|------------------------|
+| `fastapi`      | Backend API                 | `${API_EX_PORT}`       |
+| `compassadmin` | Админ-панель Compass (Ktor) | `${VALIDATOR_EX_PORT}` |
+| `watchtower`   | Автообновление compassadmin | —                      |
+| `postgres`     | PostgreSQL                  | —                      |
+
+### Первый запуск
 
 1. Создать `.env` на основе `.env.example`:
    ```bash
    cp .env.example .env
    ```
 
-2. Запустить:
+2. Создать `.env.compass-admin` на основе `.env.compass-admin.example`:
+   ```bash
+   cp .env.compass-admin.example .env.compass-admin
+   ```
+   Заполнить реальными значениями. **Если не знаете credentials** — обратитесь к [@Injent](https://t.me/Injent).
+
+3. Положить `credentials.json` от Google API в папку:
+   ```
+   compass-admin-config/google/credentials.json
+   ```
+   Если файла нет — обратитесь к [@Injent](https://t.me/Injent).
+
+4. Запустить:
    ```bash
    docker compose up -d
    ```
 
-Docker-compose автоматически переопределяет `POSTGRES_CONNECTION_STRING` для подключения к postgres внутри docker-сети —
-менять `localhost` на `postgres` в `.env` не нужно.
+### Обновления
 
-Порт API задаётся переменной `API_EX_PORT` в `.env` (по умолчанию 8000). Для nginx:
+- **compassadmin** обновляется автоматически через watchtower (каждые 5 минут проверяет ghcr.io на наличие нового
+  образа)
+- **fastapi** обновляется через пересборку:
+  ```bash
+  docker compose build fastapi && docker compose up -d fastapi
+  ```
 
-```
-API_EX_PORT=8000
-```
+### Полезные команды
 
 Посмотреть логи:
 
-   ```bash
-   docker compose logs -f
-   ```
+```bash
+docker compose logs -f
+```
+
+Логи только compassadmin:
+
+```bash
+docker compose logs -f compassadmin
+```
 
 Остановить:
 
-   ```bash
-   docker compose down
-   ```
+```bash
+docker compose down
+```
 
 ### Важно
 
 - SSL не встроен, но мобильное приложение будет требовать HTTPS
 - База данных сохраняется в named volume `pgdata`, не теряется при `down`
+- Данные compassadmin (SQLite, токены) хранятся в `compass-admin-config/data/` и `compass-admin-config/tokens/`
+- Файлы `.env`, `.env.compass-admin`, `compass-admin-config/google/`, `compass-admin-config/tokens/`,
+  `compass-admin-config/data/` не попадают в git
 
 ## Структура проекта
 
 ```
 bgitu_api/
-├── api/           # FastAPI роутеры
-├── database/      # Работа с БД
-├── models/        # Pydantic и SQLAlchemy модели
-├── modules/       # Парсеры Excel и сайта
-├── data/          # JSON-конфиги и файлы обновленй
-├── public/        # Статика SPA
-├── Dockerfile     # Сборка контейнера FastAPI
+├── api/                              # FastAPI роутеры
+├── database/                         # Работа с БД
+├── models/                           # Pydantic и SQLAlchemy модели
+├── modules/                          # Парсеры Excel и сайта
+├── data/                             # JSON-конфиги и файлы обновленй
+├── public/                           # Статика SPA
+├── compass-admin-config/             # Конфиг compassadmin (монтируется в контейнер)
+│   ├── application.yaml              # Шаблон конфига (с ${VAR} плейсхолдерами)
+│   ├── google/credentials.json       # Google API ключи (в .gitignore)
+│   ├── tokens/                       # Google OAuth токены (в .gitignore)
+│   └── data/                         # SQLite база compassadmin (в .gitignore)
+├── Dockerfile                        # Сборка контейнера FastAPI
 ├── docker-compose.yml
-├── .dockerignore  # Исключения из Docker-образа
-├── config.py      # Конфигурация
-└── app.py         # Точка входа
+├── .env.example                      # Шаблон для backend
+├── .env.compass-admin.example        # Шаблон для compassadmin
+├── .dockerignore
+├── config.py                         # Конфигурация
+└── app.py                            # Точка входа
 ```

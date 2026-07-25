@@ -13,6 +13,33 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  compassadmin:
+    image: ghcr.io/injent/compass-admin:latest
+    container_name: compassadmin
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    env_file: .env.compass-admin
+    environment:
+      COMPASS_DB_PATH: /app/data/compassadmin.db
+      GOOGLE_CREDENTIALS_PATH: /app/google/credentials.json
+      GOOGLE_TOKENS_DIR: /app/tokens
+    ports:
+      - "${VALIDATOR_EX_PORT}:8000"
+    volumes:
+      - ./compass-admin-config/application.yaml:/app/config/application.yaml:ro
+      - ./compass-admin-config/google:/app/google
+      - ./compass-admin-config/tokens:/app/tokens
+      - ./compass-admin-config/data:/app/data
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --interval 300 --cleanup
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     environment:

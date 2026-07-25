@@ -2,12 +2,16 @@
 .gitignore
 .env
 .env.example
+.env.compass-admin
+.env.compass-admin.example
 .idea
 venv
 __pycache__
 *.pyc
 pgdata
 data
+compass-admin
+compass-admin-config
 
 Dockerfile
 docker-compose.yml
