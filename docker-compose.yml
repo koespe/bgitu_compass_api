@@ -39,7 +39,7 @@ services:
       GOOGLE_CREDENTIALS_PATH: /app/google/credentials.json
       GOOGLE_TOKENS_DIR: /app/tokens
     ports:
-      - "${VALIDATOR_EX_PORT}:8000"
+      - "${VALIDATOR_EX_PORT}:8080"
     volumes:
       - ./compass-admin-config/application.yaml:/app/config/application.yaml:ro
       - ./compass-admin-config/google:/app/google

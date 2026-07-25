@@ -1,14 +1,14 @@
 ktor:
   deployment:
-    port: 9001
+    port: 8080
   application:
     modules:
       - ru.injent.AppKt.configureApp
 gigachat:
   authkey: "${GIGACHAT_AUTH_KEY}"
   system-instructions-file: system_instructions.txt
-  max-retries: 0
-  model: GigaChat
+  max-retries: 2
+  model: GigaChat-Pro
 compassapi:
   host: "${COMPASS_API_HOST}"
   apikey: "${COMPASS_API_KEY}"
@@ -17,5 +17,5 @@ access:
     login: "admin"
     password: "${ADMIN_PASSWORD}"
   - role: "USER"
-    login: "user"
+    login: "otdel"
     password: "${USER_PASSWORD}"
