@@ -5,7 +5,7 @@ services:
     environment:
       - POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@postgres:5432/compass-api
     ports:
-      - "${API_EX_PORT}:8000"
+      - "${API_EX_PORT:-8880}:8000"
     volumes:
       - ./data:/app/data
     depends_on:
@@ -39,7 +39,7 @@ services:
       GOOGLE_CREDENTIALS_PATH: /app/google/credentials.json
       GOOGLE_TOKENS_DIR: /app/tokens
     ports:
-      - "${VALIDATOR_EX_PORT}:8080"
+      - "${VALIDATOR_EX_PORT:-8881}:9001"
     volumes:
       - ./compass-admin-config/application.yaml:/app/config/application.yaml:ro
       - ./compass-admin-config/google:/app/google

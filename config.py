@@ -17,8 +17,6 @@ class Settings(BaseSettings):
     admin_password: str
     postgres_connection_string: str
 
-    api_ex_port = 8000  # Внешний порт для роутинга в nginx на сервере
-
     @property
     def engine(self):
         return create_async_engine(self.postgres_connection_string)

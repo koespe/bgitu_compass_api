@@ -47,12 +47,12 @@ python app.py
 
 ### Сервисы
 
-| Сервис         | Описание                    | Порт                   |
-|----------------|-----------------------------|------------------------|
-| `fastapi`      | Backend API                 | `${API_EX_PORT}`       |
-| `compassadmin` | Админ-панель Compass (Ktor) | `${VALIDATOR_EX_PORT}` |
-| `watchtower`   | Автообновление compassadmin | —                      |
-| `postgres`     | PostgreSQL                  | —                      |
+| Сервис         | Описание                    | Порт                         |
+|----------------|-----------------------------|------------------------------|
+| `fastapi`      | Backend API                 | `${API_EX_PORT:-8880}`       |
+| `compassadmin` | Админ-панель Compass (Ktor) | `${VALIDATOR_EX_PORT:-8881}` |
+| `watchtower`   | Автообновление compassadmin | —                            |
+| `postgres`     | PostgreSQL                  | —                            |
 
 ### Первый запуск
 
