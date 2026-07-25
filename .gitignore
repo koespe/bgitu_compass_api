@@ -1,6 +1,14 @@
 /.idea/
 /venv/
-/tests/
 /_backups
 /.env
-/updates/schedule_hashes.json
+/.env.compass-admin
+/data/teachers_info.json
+/data/remote_config.json
+/AGENTS.md
+/compass-admin
+compass-admin-config/google/credentials.json
+compass-admin-config/tokens/*
+!compass-admin-config/tokens/.gitkeep
+compass-admin-config/data/*
+!compass-admin-config/data/.gitkeep

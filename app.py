@@ -5,16 +5,15 @@ import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.administration import administration_router
-from api.checks import checks_router
 from api.general import general_router
 from api.schedules import schedules_router
 from api.teachers import teachers_router
 from api.updates import updates_router
 from database.base import db_init
 from modules.annual_data_reset import annual_data_reset
-from modules.site_updates import check_site_files_updates, check_missing_groups
 from modules.term_start_date_scraper import check_site_variable_updates
 
 scheduler = AsyncIOScheduler()
@@ -24,10 +23,7 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     await db_init()
 
-    scheduler.add_job(check_site_files_updates, "interval", minutes=5, next_run_time=datetime.now())
     scheduler.add_job(check_site_variable_updates, "interval", minutes=60, next_run_time=datetime.now())
-    scheduler.add_job(check_missing_groups, "cron", day_of_week="mon", hour=0, minute=0, next_run_time=datetime.now())
-
     scheduler.add_job(annual_data_reset, "cron", month=7, day=15, hour=0, minute=0, second=0)
 
     scheduler.start()
@@ -52,8 +48,8 @@ app.include_router(schedules_router)
 app.include_router(teachers_router)
 app.include_router(administration_router)
 app.include_router(updates_router)
-app.include_router(checks_router)
 
+app.mount("/", StaticFiles(directory="public", html=True), name="public")
 
 app.add_middleware(
     CORSMiddleware,

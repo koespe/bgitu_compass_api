@@ -1,6 +1,5 @@
 import datetime
-from datetime import date, time
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, Field
 
@@ -12,42 +11,14 @@ class UpdateAvailability(BaseModel):
     downloadUrl: HttpUrl
 
 
-class TeacherLocationPerLesson(BaseModel):
-    subjectName: str
-    classroom: str
-    building: str
-    isLecture: bool
-    lessonDate: date
-    startAt: time = Field(..., example="12:20:00")
-    endAt: time = Field(..., example="14:20:00")
-    weekday: int
-
-
-class TeacherLocations(BaseModel):
-    teacher: str
-    data: List[TeacherLocationPerLesson]
-
-
 class Groups(BaseModel):
     id: int
     name: str
     scheduleUpdateDate: int
 
 
-class GroupsInfo(BaseModel):
-    id: int
-    name: str
-    scheduleUpdateDate: Optional[int] = None
-
-
-class ScheduleVersion(BaseModel):
-    scheduleVersion: int
-    forceUpdateVersion: int
-
-
 class RemoteConfig(BaseModel):
     termStartDate: datetime.date
-    swapWeeks: bool
     lastResetTimestamp: str = Field(..., example="2023-01-01T12:00:00Z", description="ISO8601 UTC timestamp")
     versionCode: int
     downloadUrl: HttpUrl
@@ -87,22 +58,3 @@ class DaySchedule(BaseModel):
 class WeekSchedule(BaseModel):
     first_week: DaySchedule
     second_week: DaySchedule
-
-
-class SuspiciousSubject(BaseModel):
-    subject: str
-    groups: List[str]
-
-
-class SuspiciousSubjectsResponse(BaseModel):
-    approximateAccuracy: int
-    subjects: List[SuspiciousSubject]
-
-
-class GroupRiskItem(BaseModel):
-    risk: Literal["high", "medium"]
-    groupName: str
-    reason: str
-
-
-GroupRiskResponse = List[GroupRiskItem]

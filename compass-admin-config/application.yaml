@@ -1,0 +1,21 @@
+ktor:
+  deployment:
+    port: 9001
+  application:
+    modules:
+      - ru.injent.AppKt.configureApp
+gigachat:
+  authkey: "${GIGACHAT_AUTH_KEY}"
+  system-instructions-file: system_instructions.txt
+  max-retries: 0
+  model: GigaChat
+compassapi:
+  host: "${COMPASS_API_HOST}"
+  apikey: "${COMPASS_API_KEY}"
+access:
+  - role: "SUPERUSER"
+    login: "admin"
+    password: "${ADMIN_PASSWORD}"
+  - role: "USER"
+    login: "user"
+    password: "${USER_PASSWORD}"

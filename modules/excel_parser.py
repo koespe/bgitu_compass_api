@@ -69,7 +69,7 @@ def parse_group_name(sheet, group_column, groups_row):
         else:
             return None
 
-    group_name = group_name.strip().replace("/", "-").replace(" ", "").replace("спо", "СПО")
+    group_name = group_name.strip().replace("/", "-").replace("спо", "СПО")
 
     return group_name
 
