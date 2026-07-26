@@ -31,8 +31,6 @@ services:
   compassadmin:
     image: ghcr.io/injent/compass-admin:latest
     container_name: compassadmin
-    labels:
-      com.centurylinklabs.watchtower.enable: "true"
     env_file: .env.compass-admin
     environment:
       COMPASS_DB_PATH: /app/data/compassadmin.db
