@@ -73,11 +73,12 @@ async def insert_schedule(group_id, schedule):
     async with get_session() as session:
         query = await session.execute(select(Groups).where(Groups.id == group_id))
         group = query.scalar()
-        group.rawSchedule = schedule
-        group.scheduleUpdateDate = datetime.now(timezone.utc).timestamp()
+        if group.rawSchedule != schedule:
+            group.rawSchedule = schedule
+            group.scheduleUpdateDate = datetime.now(timezone.utc).timestamp()
 
-        session.add(group)
-        await session.commit()
+            session.add(group)
+            await session.commit()
 
 
 @asynccontextmanager
