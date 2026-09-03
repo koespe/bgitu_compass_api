@@ -32,7 +32,7 @@ class RemoteConfig(BaseModel):
 
 class Teacher(BaseModel):
     name: str = Field(..., example="Казаков Олег Дмитриевич")
-    departments: str = Field(..., example="Кафедра информационных технологий")
+    departments: list[str] = Field(..., example=["Кафедра информационных технологий"])
 
 
 class Lesson(BaseModel):
