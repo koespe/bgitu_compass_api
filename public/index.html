@@ -39,7 +39,7 @@
                 Открыть Telegram-бота
             </a>
             <div class="download-buttons">
-                <a href="https://bgitu-compass.ru/download" target="_blank" class="block">
+                <a href="#" id="download-link" target="_blank" class="block">
                     <img src="assets/download_button.png" alt="Скачайте APK" width="188" height="63"/>
                 </a>
                 <a href="https://www.rustore.ru/catalog/app/ru.bgitu.app?rsm=1&mt_link_id=l394r2" target="_blank"
@@ -99,3 +99,10 @@
 </section>
 </body>
 </html>
+<script>
+    (function() {
+        const link = document.getElementById('download-link');
+        const baseUrl = window.location.origin; // https://bgitu-compass.ru
+        link.href = baseUrl + '/download';
+    })();
+</script>
