@@ -68,3 +68,46 @@ class Teacher(BaseModel):
 
 class TeachersInfo(BaseModel):
     teachers: list[Teacher]
+
+
+class ProfcomTimeRange(BaseModel):
+    from_: str = Field(..., alias="from")
+    to: str
+
+    # разрешает и from_ в коде, и "from" из JSON
+    model_config = {"populate_by_name": True}
+
+
+class ProfcomDayRange(BaseModel):
+    from_: int = Field(..., alias="from")
+    to: int
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfcomScheduleDefault(BaseModel):
+    enabled: bool = True
+    dayRange: ProfcomDayRange
+    hours: Optional[ProfcomTimeRange] = None
+    comment: Optional[str] = None
+
+
+class ProfcomScheduleOverride(BaseModel):
+    enabled: Optional[bool] = None
+    dayRange: Optional[ProfcomDayRange] = None
+    hours: Optional[ProfcomTimeRange] = None
+    comment: Optional[str] = None
+
+
+class ProfcomScheduleItem(BaseModel):
+    default: ProfcomScheduleDefault
+    overrides: dict[str, ProfcomScheduleOverride] = Field(default_factory=dict)
+
+
+class ProfcomSchedules(BaseModel):
+    materialAid: ProfcomScheduleItem
+    studentScholarship: ProfcomScheduleItem
+
+
+class ProfcomSchedulesPayload(BaseModel):
+    schedules: ProfcomSchedules

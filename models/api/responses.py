@@ -58,3 +58,46 @@ class DaySchedule(BaseModel):
 class WeekSchedule(BaseModel):
     first_week: DaySchedule
     second_week: DaySchedule
+
+
+class ProfcomTimeRange(BaseModel):
+    from_: str = Field(..., alias="from")
+    to: str
+
+    # разрешает и from_ в коде, и "from" из JSON
+    model_config = {"populate_by_name": True}
+
+
+class ProfcomDayRange(BaseModel):
+    from_: int = Field(..., alias="from")
+    to: int
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfcomScheduleDefault(BaseModel):
+    enabled: bool
+    dayRange: ProfcomDayRange
+    hours: Optional[ProfcomTimeRange] = None
+    comment: Optional[str] = None
+
+
+class ProfcomScheduleOverride(BaseModel):
+    enabled: Optional[bool] = None
+    dayRange: Optional[ProfcomDayRange] = None
+    hours: Optional[ProfcomTimeRange] = None
+    comment: Optional[str] = None
+
+
+class ProfcomScheduleItem(BaseModel):
+    default: ProfcomScheduleDefault
+    overrides: dict[str, ProfcomScheduleOverride] = Field(default_factory=dict)
+
+
+class ProfcomSchedules(BaseModel):
+    materialAid: ProfcomScheduleItem
+    studentScholarship: ProfcomScheduleItem
+
+
+class ProfcomFullResponse(BaseModel):
+    schedules: ProfcomSchedules
