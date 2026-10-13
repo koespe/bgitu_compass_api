@@ -14,7 +14,6 @@ NO_LESSONS_MAGISTRACY_STRING = "Дни самостоятельной"  # На �
 WEEKDAY_COLUMN = 1
 COLUMN_TIME_BUILDING_1 = 2
 COLUMN_TIME_BUILDING_2 = 3
-COLUMN_STEP_FOR_LESSON = 2  # В одной клетке хранится четное, в другой нечетное
 
 
 async def process_schedule_file(file):
@@ -75,44 +74,49 @@ def parse_group_name(sheet, group_column, groups_row):
 
 
 async def parse_group_schedule(sheet, group_column, schedule_start_row):
-    schedule_week = {"first_week": {}, "second_week": {}}
-    schedule_per_day_first_week = []
-    schedule_per_day_second_week = []
+    schedule_week = ensure_weekdays_keys({"first_week": {}, "second_week": {}})
+    lesson_rows = []
+    previous_key = None
 
-    weekday_last = parse_cell(sheet, row=schedule_start_row, col=WEEKDAY_COLUMN)
-    for group_row in range(schedule_start_row, sheet.max_row + 1, COLUMN_STEP_FOR_LESSON):
-        weekday_now = parse_cell(sheet, row=group_row, col=WEEKDAY_COLUMN)
+    for group_row in range(schedule_start_row, sheet.max_row + 1):
+        weekday = parse_cell(sheet, row=group_row, col=WEEKDAY_COLUMN)
+        weekday = str(weekday).strip().lower() if weekday else ""
+        if weekday not in WEEKDAYS_LIST:
+            break
 
-        if weekday_now != weekday_last:  # Получено расписание на день, записываем его
-            weekday_index = WEEKDAY_INDEX[weekday_last.lower()]
-            schedule_week["first_week"][weekday_index] = schedule_per_day_first_week
-            schedule_week["second_week"][weekday_index] = schedule_per_day_second_week
+        # parse_cell раскрывает объединенные ячейки времени для каждой строки.
+        times = tuple(
+            re.sub(r"\s+", "", str(value)) if value else ""
+            for value in (
+                parse_cell(sheet, row=group_row, col=COLUMN_TIME_BUILDING_1),
+                parse_cell(sheet, row=group_row, col=COLUMN_TIME_BUILDING_2),
+            )
+        )
+        key = (WEEKDAY_INDEX[weekday], times)
+        if key != previous_key:
+            if lesson_rows:
+                append_lesson(sheet, group_column, lesson_rows, previous_key[0], schedule_week)
+            lesson_rows = []
+            previous_key = key
+        if not any(times):
+            continue
+        lesson_rows.append(group_row)
 
-            if weekday_now:  # Переход на следующий день
-                if weekday_now.lower() not in WEEKDAYS_LIST:  # Возможно парсер перешел на комментарий
-                    break
-                weekday_last = weekday_now
-                schedule_per_day_first_week = []
-                schedule_per_day_second_week = []
-            else:  # Расписания группы закончилось, далее пустые клетки
-                break
-
-        lesson_first_week = parse_day(sheet, row=group_row, col=group_column)
-        lesson_second_week = parse_day(sheet, row=group_row + 1, col=group_column)
-
-        if lesson_first_week:
-            schedule_per_day_first_week.append(lesson_first_week)
-        if lesson_second_week:
-            schedule_per_day_second_week.append(lesson_second_week)
-
-    # Обрабатываем последний день недели на случай, если он не был записан
-    schedule_week["first_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_first_week
-    schedule_week["second_week"][WEEKDAY_INDEX[weekday_last.lower()]] = schedule_per_day_second_week
-
-    return ensure_weekdays_keys(schedule_week)
+    if lesson_rows:
+        append_lesson(sheet, group_column, lesson_rows, previous_key[0], schedule_week)
+    return schedule_week
 
 
-def parse_day(sheet, row, col):
+def append_lesson(sheet, group_column, lesson_rows, weekday_index, schedule_week):
+    # Одна строка относится к обеим неделям, две — к первой и второй.
+    for week_index, week_name in enumerate(("first_week", "second_week")):
+        row = lesson_rows[0] if len(lesson_rows) == 1 else lesson_rows[week_index]
+        lesson = parse_day(sheet, row=row, col=group_column, week_index=week_index)
+        if lesson:
+            schedule_week[week_name].setdefault(weekday_index, []).append(lesson)
+
+
+def parse_day(sheet, row, col, week_index):
     cell = parse_cell(sheet, row=row, col=col, return_value=False)  # Ячейка со всеми ее свойствами
     cell_value: str = parse_cell(sheet, row=row, col=col, return_value=True)  # Plain text
 
@@ -170,8 +174,7 @@ def parse_day(sheet, row, col):
         else:  # Это нормальная пара
             classroom = re.search(r"№(\S+)", cell_value).group(1)
             if "/" in classroom:  # "123/321" — разделение на первую/вторую недели
-                bottom_cell_value = parse_cell(sheet, row + 1, col)
-                classroom = classroom.split("/")[0 if cell.value == bottom_cell_value else 1]
+                classroom = classroom.split("/")[week_index]
             cell_value = re.sub(r"№\S+", "", cell_value).strip()  # Убираем из строки аудиторию
     elif classrooms_count == 2:
         # В этом случае первое значение — группа А, второе — Б
