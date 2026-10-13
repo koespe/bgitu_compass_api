@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     await db_init()
 
     scheduler.add_job(check_site_variable_updates, "interval", minutes=60, next_run_time=datetime.now())
-    scheduler.add_job(annual_data_reset, "interval", horus=6, next_run_time=datetime.now())
+    scheduler.add_job(annual_data_reset, "interval", hours=6, next_run_time=datetime.now())
 
     scheduler.start()
 
