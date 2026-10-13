@@ -76,35 +76,37 @@ def parse_group_name(sheet, group_column, groups_row):
 
 async def parse_group_schedule(sheet, group_column, schedule_start_row):
     schedule_week = ensure_weekdays_keys({"first_week": {}, "second_week": {}})
-    lesson_rows = []
-    previous_key = None
+    lesson_rows = []  # Номера строк текущей пары: одна или две.
+    previous_key = None  # День и время текущей пары.
 
     for group_row in range(schedule_start_row, sheet.max_row + 1):
         weekday = parse_cell(sheet, row=group_row, col=WEEKDAY_COLUMN)
         weekday = str(weekday).strip().lower() if weekday else ""
         if weekday not in WEEKDAY_INDEX:
-            break
+            break  # Дошли до пустой строки или примечаний после расписания.
 
-        # parse_cell раскрывает объединенные ячейки времени для каждой строки.
-        times = tuple(
-            re.sub(r"\s+", "", str(value)) if value else ""
-            for value in (
-                parse_cell(sheet, row=group_row, col=COLUMN_TIME_BUILDING_1),
-                parse_cell(sheet, row=group_row, col=COLUMN_TIME_BUILDING_2),
-            )
-        )
-        key = (WEEKDAY_INDEX[weekday], times)
+        # Читаем время строки. Для объединённой ячейки parse_cell вернёт общее время.
+        time_value = parse_cell(sheet, row=group_row, col=COLUMN_TIME_BUILDING_1)
+        lesson_time = re.sub(r"\s+", "", str(time_value)) if time_value else ""
+        key = (WEEKDAY_INDEX[weekday], lesson_time)
+
+        # Другой день или время: сохраняем накопленные строки предыдущей пары.
         if key != previous_key:
             if lesson_rows:
                 append_lesson(sheet, group_column, lesson_rows, previous_key[0], schedule_week)
             lesson_rows = []
             previous_key = key
-        if not any(times):
+
+        if not lesson_time:
             continue
+
+        # При одинаковом дне и времени строки накапливаются для одной пары.
         lesson_rows.append(group_row)
 
+    # Последнюю пару сохраняем здесь: следующей строки для её сохранения уже нет.
     if lesson_rows:
         append_lesson(sheet, group_column, lesson_rows, previous_key[0], schedule_week)
+
     return schedule_week
 
 
