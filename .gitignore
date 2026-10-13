@@ -13,3 +13,4 @@ compass-admin-config/tokens/*
 compass-admin-config/data/*
 !compass-admin-config/data/.gitkeep
 /data/profcom_schedules.json
+/tests/
