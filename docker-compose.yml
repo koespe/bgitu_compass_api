@@ -3,6 +3,7 @@ services:
     build: .
     env_file: .env
     environment:
+      - PYTHONUNBUFFERED=1
       - POSTGRES_CONNECTION_STRING=postgresql+asyncpg://postgres:password@postgres:5432/compass-api
     ports:
       - "${API_EX_PORT:-8880}:8000"
@@ -12,6 +13,7 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --log-level info --access-log
 
   postgres:
     image: postgres:16-alpine
