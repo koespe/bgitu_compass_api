@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -15,6 +16,8 @@ from api.updates import updates_router
 from database.base import db_init
 from modules.annual_data_reset import annual_data_reset
 from modules.term_start_date_scraper import check_site_variable_updates
+
+logging.basicConfig(level=logging.INFO)
 
 scheduler = AsyncIOScheduler()
 

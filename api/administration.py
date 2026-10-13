@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import List
 
@@ -16,6 +17,8 @@ from modules.excel_parser import process_schedule_file
 
 administration_router = APIRouter(tags=["Administration"])
 security = HTTPBearer()
+
+logger = logging.getLogger(__name__)
 
 
 def authenticate_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -50,6 +53,7 @@ async def upload_new_schedules(
             )
     for file in files:
         filenames.append(file.filename)
+        logger.info("Начата обработка файла расписания: %s", file.filename)
         await process_schedule_file(file.file)
 
     return Response()
@@ -84,8 +88,12 @@ async def remove_groups(
     Авто-удаление групп по названию в валидаторе при появлении/исчезновении подгрупп, регистр неважен
     """
     normalized_names = [name.upper() for name in group_names]
-    result = await session.execute(delete(Groups).where(func.upper(Groups.name).in_(normalized_names)))
 
+    result = await session.execute(
+        delete(Groups)
+        .where(func.upper(Groups.name).in_(normalized_names))
+        .execution_options(synchronize_session=False)
+    )
     await session.commit()
     return {"deleted_count": result.rowcount}
 
