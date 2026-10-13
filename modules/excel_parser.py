@@ -7,7 +7,7 @@ import openpyxl
 from openpyxl.cell import MergedCell, Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from data import WEEKDAY_INDEX, WEEKDAYS_LIST
+from data import WEEKDAY_INDEX
 from database.base import insert_schedule, manage_groups
 
 NO_LESSONS_MAGISTRACY_STRING = "Дни самостоятельной"  # На всякий случай сократим, вдруг опечатка будет
@@ -24,7 +24,6 @@ async def process_schedule_file(file):
     wb = openpyxl.load_workbook(file)
     sheet = wb.worksheets[0]
 
-    # Определяем в каком row находятся названия групп
     groups_row = None
     for row_number in range(1, 10):
         cell = parse_cell(sheet, row=row_number, col=2)
@@ -33,17 +32,19 @@ async def process_schedule_file(file):
                 groups_row = row_number
                 break
 
-    """ Определяем клетку, где появляется понедельник. В БАК 2 клетки, в МАГ одна
-    В БАК группа обычно состоит из 2х merged cell в высоту, но в нижней бывают подгруппы "а" и "б".
-    С МАГ ничего не ломается, все равно попадаем на одиночную в высоту клетку"""
+    if groups_row is None:
+        raise ValueError("Не найдена строка заголовка с группами и корпусами")
+
     schedule_start_row = None
-    for row_number in range(groups_row, 20):
+    for row_number in range(groups_row, sheet.max_row + 1):
         cell = parse_cell(sheet, row=row_number, col=WEEKDAY_COLUMN)
-        if cell:
-            if "понедельник" in cell.lower():
-                schedule_start_row = row_number
-                groups_row = schedule_start_row - 1
-                break
+        if cell and str(cell).strip().lower() in WEEKDAY_INDEX:
+            schedule_start_row = row_number
+            groups_row = schedule_start_row - 1
+            break
+
+    if schedule_start_row is None:
+        raise ValueError("Не найдены дни недели в расписании")
 
     for group_column in range(4, sheet.max_column + 1):
         group_name = parse_group_name(sheet, group_column, groups_row)
@@ -81,7 +82,7 @@ async def parse_group_schedule(sheet, group_column, schedule_start_row):
     for group_row in range(schedule_start_row, sheet.max_row + 1):
         weekday = parse_cell(sheet, row=group_row, col=WEEKDAY_COLUMN)
         weekday = str(weekday).strip().lower() if weekday else ""
-        if weekday not in WEEKDAYS_LIST:
+        if weekday not in WEEKDAY_INDEX:
             break
 
         # parse_cell раскрывает объединенные ячейки времени для каждой строки.
@@ -246,7 +247,7 @@ def ensure_weekdays_keys(schedule_dict):
     В магистратуре может не оказаться какого-то дня недели, так что добавляем их
     """
     for week in ["first_week", "second_week"]:
-        for day in range(1, 7):
+        for day in WEEKDAY_INDEX.values():
             if day not in schedule_dict[week]:
                 schedule_dict[week][day] = []
 
