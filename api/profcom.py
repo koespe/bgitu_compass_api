@@ -1,39 +1,32 @@
-import json
-from pathlib import Path
-
-from fastapi import APIRouter, Depends, HTTPException
+import aiohttp
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPAuthorizationCredentials
 
-from api.administration import authenticate_admin
-from models.api import payloads, responses
+from config import settings
 
 profcom_router = APIRouter(tags=["Profcom"])
 
-PROFCOM_SCHEDULES_PATH = Path("data/profcom_schedules.json")
+PROFCOM_CONFIG_URL = "https://validator.bgitu.ru/api/schedules/config"
 
 
 @profcom_router.get(
-    "/profcom/schedules",
+    "/profkom/config",
     responses={
-        200: {"model": responses.ProfcomFullResponse},
-        404: {"description": "Файл profcom_schedules.json не найден"},
+        502: {"description": "Не удалось получить конфигурацию с validator.bgitu.ru"},
     },
 )
-async def get_profcom_schedules():
-    if not PROFCOM_SCHEDULES_PATH.exists():
-        raise HTTPException(status_code=404, detail="Файл profcom_schedules.json не найден")
+async def get_profkom_config():
+    headers = {"X-Api-Key": settings.admin_password}
 
-    with open(PROFCOM_SCHEDULES_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:
+            async with session.get(PROFCOM_CONFIG_URL, headers=headers) as response:
+                response.raise_for_status()
+                data = await response.json(content_type=None)
+    except (aiohttp.ClientError, ValueError):
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось получить конфигурацию с validator.bgitu.ru",
+        )
 
-
-@profcom_router.post("/profcom/schedules")
-async def set_profcom_schedules(
-    payload: payloads.ProfcomSchedulesPayload,
-    auth: HTTPAuthorizationCredentials = Depends(authenticate_admin),
-):
-    data = payload.model_dump(mode="json")
-    with open(PROFCOM_SCHEDULES_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    return JSONResponse({"detail": "Success"})
+    return JSONResponse(data)
